@@ -11,7 +11,6 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 import platform
 import requests
 from pathlib import Path
-import os
 
 # Конфигурация
 SCRIPT_DIR = Path(__file__).parent
