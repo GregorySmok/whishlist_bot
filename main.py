@@ -36,7 +36,7 @@ if platform.system() == 'Windows':
 async def check_link_liquidity(link):
     try:
         response = requests.head(link)
-        if response.status_code == 200:
+        if link.startswith("https://"):
             return True
         else:
             return False
