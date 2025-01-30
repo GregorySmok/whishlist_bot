@@ -11,6 +11,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 import platform
 import requests
 from pathlib import Path
+import logging
 
 # Конфигурация
 SCRIPT_DIR = Path(__file__).parent
@@ -20,6 +21,14 @@ WISHLISTS_DIR.mkdir(exist_ok=True)
 token = "7802068134:AAFrKpQwLbpTOCsurdGw0QfBPVvOd6oR8_g"
 bot = Bot(token=token)
 dp = Dispatcher()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler(SCRIPT_DIR / 'start.log', encoding='utf-8')
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logging.getLogger("aiogram.event").setLevel(logging.WARNING)
 
 
 class States(StatesGroup):
@@ -123,7 +132,7 @@ async def delete_item(callback_query: CallbackQuery, state: FSMContext):
             wishes.pop(item_index)
             # Записываем обновленный список
             with open(wishlist_path, 'w') as wh:
-                wh.write('\n'.join(wishes))
+                wh.write('\n'.join(wishes) + '\n')
 
             await callback_query.answer("Товар удален")
             await callback_query.message.delete()
@@ -132,7 +141,7 @@ async def delete_item(callback_query: CallbackQuery, state: FSMContext):
 
     except Exception as e:
         await callback_query.answer("Произошла ошибка при удалении")
-        print(f"Ошибка при удалении: {e}")
+        logger.error(f"Ошибка при удалении: {e}")
 
 
 @dp.callback_query(F.data == "stop_deleting", StateFilter(States.deleting_item))
@@ -184,7 +193,7 @@ async def deleting_item_handler(message: Message, state: FSMContext):
             message.from_user.id,
             "Произошла ошибка при загрузке списка товаров."
         )
-        print(f"Ошибка при загрузке вишлиста: {e}")
+        logger.error(f"Ошибка при загрузке вишлиста: {e}")
         await state.set_state(States.already_started)
         await set_default_keyboard(message.from_user.id)
 
@@ -214,7 +223,7 @@ async def view_wishlists_handler(message: Message, state: FSMContext):
             ))
 
         except Exception as e:
-            print(f"Ошибка при обработке файла {wishlist_file}: {e}")
+            logger.error(f"Ошибка при обработке файла {wishlist_file}: {e}")
             continue
 
     builder.adjust(2)
@@ -272,7 +281,7 @@ async def show_wishlist(callback_query: CallbackQuery, state: FSMContext):
             callback_query.from_user.id,
             "Произошла ошибка при загрузке вишлиста."
         )
-        print(f"Ошибка при показе вишлиста: {e}")
+        logger.error(f"Ошибка при показе вишлиста: {e}")
         await state.set_state(States.already_started)
         await set_default_keyboard(callback_query.from_user.id)
 
@@ -286,28 +295,28 @@ async def back_to_main(callback_query: CallbackQuery, state: FSMContext):
 
 
 async def on_shutdown():
-    print("Начало завершения работы бота...")
+    logger.info("Начало завершения работы бота...")
     try:
         await bot.session.close()
-        print("Сессия бота закрыта")
+        logger.info("Сессия бота закрыта")
     except Exception as e:
-        print(f"Ошибка при закрытии сессии бота: {e}")
+        logger.info(f"Ошибка при закрытии сессии бота: {e}")
 
-    print("Shutdown завершен")
+    logger.info("Shutdown завершен")
 
 
 async def main():
-    print("Запуск бота...")
+    logger.info("Запуск бота...")
 
     try:
-        print("Запуск поллинга...")
+        logger.info("Запуск поллинга...")
         await dp.start_polling(bot)
     except Exception as e:
-        print(f"Критическая ошибка: {e}")
+        logger.error(f"Критическая ошибка: {e}")
         raise
     finally:
         await on_shutdown()
-        print("Бот остановлен")
+        logger.info("Бот остановлен")
 
 if __name__ == "__main__":
     try:
@@ -315,9 +324,9 @@ if __name__ == "__main__":
         asyncio.set_event_loop(loop)
         loop.run_until_complete(main())
     except KeyboardInterrupt:
-        print("Получено прерывание...")
+        logger.info("Получено прерывание...")
     except Exception as e:
-        print(f"Необработанная ошибка: {e}")
+        logger.error(f"Необработанная ошибка: {e}")
     finally:
         try:
             tasks = asyncio.all_tasks(loop)
@@ -328,5 +337,5 @@ if __name__ == "__main__":
                     *tasks, return_exceptions=True))
             loop.close()
         except Exception as e:
-            print(f"Ошибка при закрытии loop: {e}")
-        print("Программа завершена")
+            logger.error(f"Ошибка при закрытии loop: {e}")
+        logger.info("Программа завершена")
