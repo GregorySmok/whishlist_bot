@@ -141,7 +141,7 @@ async def delete_item(callback_query: CallbackQuery, state: FSMContext):
 
     except Exception as e:
         await callback_query.answer("Произошла ошибка при удалении")
-        logger.error(f"Ошибка при удалении: {e}")
+        logger.error(f"Error with deleting: {e}")
 
 
 @dp.callback_query(F.data == "stop_deleting", StateFilter(States.deleting_item))
@@ -193,7 +193,7 @@ async def deleting_item_handler(message: Message, state: FSMContext):
             message.from_user.id,
             "Произошла ошибка при загрузке списка товаров."
         )
-        logger.error(f"Ошибка при загрузке вишлиста: {e}")
+        logger.error(f"Error with wishlist uploading: {e}")
         await state.set_state(States.already_started)
         await set_default_keyboard(message.from_user.id)
 
@@ -281,7 +281,7 @@ async def show_wishlist(callback_query: CallbackQuery, state: FSMContext):
             callback_query.from_user.id,
             "Произошла ошибка при загрузке вишлиста."
         )
-        logger.error(f"Ошибка при показе вишлиста: {e}")
+        logger.error(f"Error with wishlist outputing: {e}")
         await state.set_state(States.already_started)
         await set_default_keyboard(callback_query.from_user.id)
 
@@ -295,28 +295,28 @@ async def back_to_main(callback_query: CallbackQuery, state: FSMContext):
 
 
 async def on_shutdown():
-    logger.info("Начало завершения работы бота...")
+    logger.info("Starting bot shutdown...")
     try:
         await bot.session.close()
-        logger.info("Сессия бота закрыта")
+        logger.info("Bot session was closed successfully")
     except Exception as e:
-        logger.info(f"Ошибка при закрытии сессии бота: {e}")
+        logger.info(f"Error with bot session closig: {e}")
 
-    logger.info("Shutdown завершен")
+    logger.info("Shutdown completed successfully")
 
 
 async def main():
-    logger.info("Запуск бота...")
+    logger.info("Bot starting...")
 
     try:
-        logger.info("Запуск поллинга...")
+        logger.info("Polling starting...")
         await dp.start_polling(bot)
     except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
+        logger.error(f"Critical error: {e}")
         raise
     finally:
         await on_shutdown()
-        logger.info("Бот остановлен")
+        logger.info("Bot is stopped")
 
 if __name__ == "__main__":
     try:
@@ -324,9 +324,9 @@ if __name__ == "__main__":
         asyncio.set_event_loop(loop)
         loop.run_until_complete(main())
     except KeyboardInterrupt:
-        logger.info("Получено прерывание...")
+        logger.info("Exit is caught...")
     except Exception as e:
-        logger.error(f"Необработанная ошибка: {e}")
+        logger.error(f"Uncaught error: {e}")
     finally:
         try:
             tasks = asyncio.all_tasks(loop)
@@ -337,5 +337,5 @@ if __name__ == "__main__":
                     *tasks, return_exceptions=True))
             loop.close()
         except Exception as e:
-            logger.error(f"Ошибка при закрытии loop: {e}")
-        logger.info("Программа завершена")
+            logger.error(f"Error with loop closing: {e}")
+        logger.info("Program is fiished")
