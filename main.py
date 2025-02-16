@@ -10,15 +10,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 import platform
 import requests
-from pathlib import Path
+from datetime import datetime
 import logging
+from data import config
+from database import db
 
 # Конфигурация
-SCRIPT_DIR = Path(__file__).parent
-WISHLISTS_DIR = SCRIPT_DIR / "wishlists"
-WISHLISTS_DIR.mkdir(exist_ok=True)
+SCRIPT_DIR = config.LOG_DIR
+ITEMS_PER_PAGE = 5
 
-token = "7802068134:AAFrKpQwLbpTOCsurdGw0QfBPVvOd6oR8_g"
+token = config.BOT_TOKEN
 bot = Bot(token=token)
 dp = Dispatcher()
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ class States(StatesGroup):
     adding_item = State()
     deleting_item = State()
     viewing_wishlists = State()
+    adding_friend = State()
 
 
 if platform.system() == 'Windows':
@@ -44,7 +46,6 @@ if platform.system() == 'Windows':
 
 async def check_link_liquidity(link):
     try:
-        response = requests.head(link)
         if link.startswith("https://"):
             return True
         else:
@@ -55,31 +56,27 @@ async def check_link_liquidity(link):
 
 async def set_default_keyboard(chat_id):
     builder = ReplyKeyboardBuilder()
-    builder.row(types.KeyboardButton(text="/добавить"))
-    builder.row(types.KeyboardButton(text="/удалить"))
-    builder.row(types.KeyboardButton(text="/посмотреть"))
+    builder.row(types.KeyboardButton(text="/мой_вишлист"),
+                types.KeyboardButton(text="/друзья"))
+    builder.row(types.KeyboardButton(text="/добавить"),
+                types.KeyboardButton(text="/удалить"))
+    builder.row(types.KeyboardButton(text="/добавить_друга"))
     await bot.send_message(chat_id, "Выберите действие:", reply_markup=builder.as_markup(resize_keyboard=True))
 
 
 @dp.message(StateFilter(default_state, States.already_started), Command(commands=["start"]))
 async def start_handler(message: Message, state: FSMContext):
+    if not message.from_user.username:
+        await bot.send_message(message.chat_id, "Для использования этого бота вам необходимо иметь юзернейм для Телеграма!\nНастроить его можно в настройках профиля")
+        return
     await state.set_state(States.already_started)
-    users_file = SCRIPT_DIR / "users.txt"
-
-    # Создаём файл пользователей, если его нет
-    if not users_file.exists():
-        users_file.touch()
-
-    with open(users_file) as users:
-        users_list = users.read().splitlines()
-
-    if str(message.from_user.id) not in users_list:
-        with open(users_file, 'a') as users:
-            users.write(f"{message.from_user.id}\n")
-
-        wishlist_path = WISHLISTS_DIR / \
-            f"whishlist^{message.from_user.username}^{message.from_user.id}.txt"
-        wishlist_path.touch()  # Создаём пустой файл вишлиста
+    users_list = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
+    if message.from_user.id not in users_list:
+        await db.execute(
+            "INSERT INTO users (id, username) VALUES (%s, %s)",
+            (message.from_user.id, message.from_user.username))
+        await db.execute(
+            f"CREATE TABLE {message.from_user.username} (stuff_link VARCHAR(2048))")
 
         await bot.send_message(message.from_user.id, f"Привет, {message.from_user.username}! Ваш вишлист создан.")
     else:
@@ -96,15 +93,17 @@ async def add_item_handler(message: Message, state: FSMContext):
 @dp.message(StateFilter(States.adding_item))
 async def adding_item(message: Message, state: FSMContext):
     item_link = message.text
+    goods = [i[0] for i in await db.fetch_all(f"SELECT stuff_link FROM {message.from_user.username.lower()}")]
     if item_link == "0":
         await state.set_state(States.already_started)
         await set_default_keyboard(message.from_user.id)
         return
     if await check_link_liquidity(item_link):
-        wishlist_path = WISHLISTS_DIR / \
-            f"whishlist^{message.from_user.username}^{message.from_user.id}.txt"
-        with open(wishlist_path, 'a') as wishlist:
-            wishlist.write(f"{item_link}\n")
+        if item_link in goods:
+            await bot.send_message(message.from_user.id, "Ошибка: ссылка уже есть в вашем списке. Попробуйте другую")
+            return
+        await db.execute(f"INSERT INTO {message.from_user.username} VALUES (%s)",
+                         (item_link, ))
         await bot.send_message(message.from_user.id, f"Товар добавлен в ваш список.")
         await state.set_state(States.already_started)
         await set_default_keyboard(message.from_user.id)
@@ -113,26 +112,19 @@ async def adding_item(message: Message, state: FSMContext):
 
 
 @dp.callback_query(F.data.startswith("del_"), StateFilter(States.deleting_item))
-async def delete_item(callback_query: CallbackQuery, state: FSMContext):
+async def delete_item(callback_query: CallbackQuery):
     try:
         # Получаем индекс товара из callback_data
         item_index = int(callback_query.data.replace("del_", ""))
 
         # Получаем данные пользователя
         username = callback_query.from_user.username
-        user_id = callback_query.from_user.id
-        wishlist_path = WISHLISTS_DIR / f"whishlist^{username}^{user_id}.txt"
 
-        # Читаем список товаров
-        with open(wishlist_path, 'r') as wh:
-            wishes = wh.read().splitlines()
+        wishes = [i[0] for i in await db.fetch_all(f"SELECT stuff_link FROM {username.lower()}")]
 
         # Удаляем товар по индексу
         if 0 <= item_index < len(wishes):
-            wishes.pop(item_index)
-            # Записываем обновленный список
-            with open(wishlist_path, 'w') as wh:
-                wh.write('\n'.join(wishes) + '\n')
+            await db.execute(f"DELETE FROM {username.lower()} WHERE stuff_link = %s", (wishes[item_index], ))
 
             await callback_query.answer("Товар удален")
             await callback_query.message.delete()
@@ -156,19 +148,15 @@ async def stop_deleting(callback_query: CallbackQuery, state: FSMContext):
 @dp.message(StateFilter(States.already_started), Command(commands=["удалить"]))
 async def deleting_item_handler(message: Message, state: FSMContext):
     await state.set_state(States.deleting_item)
-    wishlist_path = WISHLISTS_DIR / \
-        f"whishlist^{message.from_user.username}^{message.from_user.id}.txt"
 
     try:
-        with open(wishlist_path) as wh:
-            wishes = wh.read().splitlines()
+        wishes = [i[0] for i in await db.fetch_all(f"SELECT stuff_link FROM {message.from_user.username.lower()}")]
 
         if not wishes:
             await bot.send_message(message.from_user.id, "Ваш вишлист пуст.")
             await state.set_state(States.already_started)
             await set_default_keyboard(message.from_user.id)
             return
-
         # Отправляем каждый товар с кнопкой удаления
         for index, item in enumerate(wishes):
             builder = InlineKeyboardBuilder()
@@ -198,100 +186,165 @@ async def deleting_item_handler(message: Message, state: FSMContext):
         await set_default_keyboard(message.from_user.id)
 
 
-@dp.message(StateFilter(States.already_started), Command(commands=["посмотреть"]))
-async def view_wishlists_handler(message: Message, state: FSMContext):
-    await state.set_state(States.viewing_wishlists)
-
-    # Получаем список всех файлов вишлистов из правильной директории
-    wishlist_files = list(WISHLISTS_DIR.glob("whishlist^*^*.txt"))
-
-    if not wishlist_files:
-        await bot.send_message(message.from_user.id, "Пока нет ни одного вишлиста.")
-        await state.set_state(States.already_started)
+@dp.message(StateFilter(States.already_started), Command(commands=['мой_вишлист']))
+async def my_wishlist_handler(message: Message):
+    wishlist = [i[0] for i in await db.fetch_all(
+        f"SELECT * FROM {message.from_user.username.lower()}")]
+    if not wishlist:
+        await bot.send_message(message.from_user.id, "Ваш вишлист пуст.")
         await set_default_keyboard(message.from_user.id)
         return
+    await bot.send_message(message.from_user.id, "Ваш вишлист:")
+    for link in wishlist:
+        await bot.send_message(message.from_user.id, link)
 
+# Команда /friends
+
+
+@dp.message(StateFilter(States.already_started), Command(commands=['друзья']))
+async def cmd_friends(message: Message):
+    # Отправляем первую страницу
+    await show_friends_page(message, user_id=message.from_user.id, page=0)
+
+
+async def show_friends_page(message: types.Message, user_id: int, page: int):
+    friends = [
+        i[0] if i[1] == user_id else i[1]
+        for i in await db.fetch_all(
+            "SELECT user_1, user_2 FROM friends_list WHERE (user_1 = %s OR user_2 = %s) AND status = 'accepted' LIMIT %s OFFSET %s",
+            (user_id, user_id, ITEMS_PER_PAGE, page * ITEMS_PER_PAGE))
+    ]
+
+    # Получаем общее количество друзей
+    total_friends = (await db.fetch_one(
+        "SELECT COUNT(*) FROM friends_list WHERE user_1 = %s OR user_2 = %s",
+        (user_id, user_id)
+    ))[0]
+
+    # Создаем клавиатуру с кнопками для друзей
     builder = InlineKeyboardBuilder()
-    for wishlist_file in wishlist_files:
-        try:
-            username = wishlist_file.name.split('^')[1]
-            user_id = wishlist_file.name.split('^')[2].replace('.txt', '')
+    for friend in friends:
+        friend_name = (await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend, )))[0]
+        builder.add(types.InlineKeyboardButton(
+            text=friend_name, callback_data=f"friend_{friend}"))
 
-            builder.add(types.InlineKeyboardButton(
-                text=username,
-                callback_data=f"view^{username}^{user_id}"
-            ))
+    # Добавляем кнопки для навигации
+    if page > 0:
+        builder.add(types.InlineKeyboardButton(
+            text="Назад", callback_data=f"page_{page - 1}"))
+    if (page + 1) * ITEMS_PER_PAGE < total_friends:
+        builder.add(types.InlineKeyboardButton(
+            text="Вперед", callback_data=f"page_{page + 1}"))
 
-        except Exception as e:
-            logger.error(f"Ошибка при обработке файла {wishlist_file}: {e}")
-            continue
+    # Отправляем сообщение с кнопками
+    await message.answer(f"Страница {page + 1}. Выберите друга:", reply_markup=builder.as_markup())
 
-    builder.adjust(2)
-    builder.row(types.InlineKeyboardButton(
-        text="Назад",
-        callback_data="back_to_main"
-    ))
-
-    await bot.send_message(
-        message.from_user.id,
-        "Выберите вишлист для просмотра:",
-        reply_markup=builder.as_markup()
-    )
+# Обработка нажатия на кнопку с другом
 
 
-@dp.callback_query(F.data.startswith("view"), StateFilter(States.viewing_wishlists))
-async def show_wishlist(callback_query: CallbackQuery, state: FSMContext):
-    try:
-        _, username, user_id = callback_query.data.split('^')
-        wishlist_file = WISHLISTS_DIR / f"whishlist^{username}^{user_id}.txt"
-        await callback_query.answer()
-        await callback_query.message.delete()
+@dp.callback_query(F.data.startswith("friend_"))
+async def process_friend_selection(callback_query: types.CallbackQuery):
+    friend_id = int(callback_query.data.split("_")[1])
 
-        if not wishlist_file.exists():
-            await bot.send_message(
-                callback_query.from_user.id,
-                "Вишлист не найден."
-            )
-            await state.set_state(States.already_started)
-            await set_default_keyboard(callback_query.from_user.id)
-            return
+    friend_name = (await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend_id, )))[0]
 
-        with open(wishlist_file, 'r') as wh:
-            wishes = wh.read().splitlines()
+    wishes = [i[0] for i in await db.fetch_all(
+        f"SELECT * FROM {friend_name}")]
 
-        if not wishes:
-            await bot.send_message(
-                callback_query.from_user.id,
-                f"Вишлист пользователя {username} пуст."
-            )
-        else:
-            await bot.send_message(
-                callback_query.from_user.id,
-                f"Вишлист пользователя {username}:"
-            )
-
-            for wish in wishes:
-                await bot.send_message(callback_query.from_user.id, wish)
-
-        await state.set_state(States.already_started)
+    if not wishes:
+        await bot.send_message(callback_query.from_user.id, f"Вишлист @{friend_name} пуст.")
         await set_default_keyboard(callback_query.from_user.id)
+        return
+    await bot.send_message(callback_query.from_user.id, f"Вишлист @{friend_name}:")
+    for link in wishes:
+        await bot.send_message(callback_query.from_user.id, link)
 
-    except Exception as e:
-        await bot.send_message(
-            callback_query.from_user.id,
-            "Произошла ошибка при загрузке вишлиста."
-        )
-        logger.error(f"Error with wishlist outputing: {e}")
-        await state.set_state(States.already_started)
-        await set_default_keyboard(callback_query.from_user.id)
-
-
-@dp.callback_query(F.data == "back_to_main", StateFilter(States.viewing_wishlists))
-async def back_to_main(callback_query: CallbackQuery, state: FSMContext):
+    # Подтверждаем обработку callback
     await callback_query.answer()
-    await callback_query.message.delete()
-    await state.set_state(States.already_started)
-    await set_default_keyboard(callback_query.from_user.id)
+
+# Обработка нажатия на кнопку пагинации
+
+
+@dp.callback_query(F.data.startswith("page_"))
+async def process_page_selection(callback_query: types.CallbackQuery):
+    page = int(callback_query.data.split("_")[1])
+    await show_friends_page(callback_query.message, user_id=callback_query.from_user.id, page=page)
+    await callback_query.answer()
+
+
+@dp.message(StateFilter(States.already_started), Command(commands=["добавить_друга"]))
+async def add_friend_handler(message: Message, state: FSMContext):
+    await state.set_state(States.adding_friend)
+    await bot.send_message(message.chat.id, "Чтобы добавить друга, отправьте его юзернейм в формате @username или 0, чтобы завершить процесс:")
+
+
+@dp.message(StateFilter(States.adding_friend))
+async def adding_friend(message: Message, state: FSMContext):
+    if message.text == '0':
+        await bot.send_message(message.chat.id, "Добавление друга завершено.")
+        await state.set_state(States.already_started)
+        await set_default_keyboard(message.chat.id)
+        return
+    if message.text.startswith("@"):
+        username = message.text.replace("@", "")
+        users_list = [i[0] for i in await db.fetch_all("SELECT username FROM users")]
+        if username in users_list:
+            friend_id = (await db.fetch_one("SELECT id FROM users WHERE username = %s", (username, )))[0]
+            if friend_id == message.from_user.id:
+                await bot.send_message(message.chat.id, "Вы не можете добавить себя в друзья.")
+                return
+            user1 = message.from_user.id
+            user2 = friend_id
+            old_request = (await db.fetch_one("SELECT status, time FROM friends_list WHERE user_1 IN (%s, %s) AND user_2 IN (%s, %s)", (user1, user2, user1, user2)))
+            if old_request:
+                if old_request[0] == 'accepted':
+                    await bot.send_message(message.chat.id, f"Вы уже друзья с {message.text}. Попробуйте другой юзернейм")
+                    return
+                if old_request[0] == 'waiting' or old_request[0] == 'rejected':
+                    old_time = old_request[1]
+                    if (datetime.now() - old_time).total_seconds() // 60 < 5:
+                        await bot.send_message(message.chat.id, f"Предыдущий запрос {message.text} был отправлен менее 5 минут. Попробуйте позже.")
+                        return
+                    else:
+                        await db.execute("DELETE FROM friends_list WHERE user_1 IN (%s, %s) AND user_2 IN (%s, %s)", (user1, user2, user1, user2))
+            await db.execute("INSERT INTO friends_list VALUES(%s, %s, 'waiting', %s)", (user1, user2, datetime.now()))
+            await bot.send_message(message.chat.id, f"Запрос дружбы отправлен {message.text}")
+            await state.set_state(States.already_started)
+            await set_default_keyboard(message.chat.id)
+            builder = InlineKeyboardBuilder()
+            builder.add(types.InlineKeyboardButton(
+                text="Принять",
+                callback_data=f"accept_friend^{user1}",
+            ))
+            builder.add(types.InlineKeyboardButton(
+                text="Отклонить",
+                callback_data=f"reject_friend^{user1}",
+            ))
+            await bot.send_message(friend_id, f"@{message.from_user.username} хочет добавить вас в друзья. Принять заявку?", reply_markup=builder.as_markup())
+        else:
+            await bot.send_message(message.chat.id, f"Пользователь {message.text} не найден.")
+    else:
+        await bot.send_message(message.chat.id, "Введен неверный юзернейм. Формат юзернейма @username или 0 для завершения.")
+
+
+@dp.callback_query(F.data.startswith("accept_friend"), StateFilter(States.already_started))
+async def accept_friend(callback_query: CallbackQuery):
+    friend_id = callback_query.data.split('^')[1]
+    user_id = callback_query.from_user.id
+    await callback_query.answer()
+    await bot.send_message(int(friend_id), f"@{user_id} принял ваш запрос дружбы.")
+    await bot.send_message(int(user_id), f"Вы добавили @{friend_id} в друзья.")
+    await db.execute("UPDATE friends_list SET status = 'accepted' WHERE user_1 IN (%s, %s) AND user_2 IN (%s, %s)", (user_id, friend_id, user_id, friend_id))
+
+
+@dp.callback_query(F.data.startswith("reject_friend"), StateFilter(States.already_started))
+async def reject_friend(callback_query: CallbackQuery):
+    friend_id = callback_query.data.split('^')[1]
+    user_id = callback_query.from_user.id
+    await callback_query.answer()
+    await bot.send_message(int(friend_id), f"@{callback_query.from_user.username} отклонил ваш запрос дружбы.")
+    await bot.send_message(int(user_id), "Запрос отклонен")
+    await db.execute("UPDATE friends_list SET status = 'rejected' WHERE user_1 IN (%s, %s) AND user_2 IN (%s, %s)", (user_id, friend_id, user_id, friend_id,))
 
 
 async def on_shutdown():
@@ -299,6 +352,7 @@ async def on_shutdown():
     try:
         await bot.session.close()
         logger.info("Bot session was closed successfully")
+        await db.close()
     except Exception as e:
         logger.info(f"Error with bot session closig: {e}")
 
