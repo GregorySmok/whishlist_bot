@@ -30,6 +30,7 @@ class DatabaseManager:
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         self.host = host
+        self.port = 3306
         self.user = user
         self.password = password
         self.database = database
@@ -45,6 +46,7 @@ class DatabaseManager:
         try:
             self.pool = await aiomysql.create_pool(
                 host=self.host,
+                port=self.port,
                 user=self.user,
                 password=self.password,
                 db=self.database,
