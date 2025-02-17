@@ -102,7 +102,7 @@ async def adding_item(message: Message, state: FSMContext):
         if item_link in goods:
             await bot.send_message(message.from_user.id, "Ошибка: ссылка уже есть в вашем списке. Попробуйте другую")
             return
-        await db.execute(f"INSERT INTO {message.from_user.username} VALUES (%s)",
+        await db.execute(f"INSERT INTO {message.from_user.username.lower()} VALUES (%s)",
                          (item_link, ))
         await bot.send_message(message.from_user.id, f"Товар добавлен в ваш список.")
         await state.set_state(States.already_started)
