@@ -67,7 +67,7 @@ async def set_default_keyboard(chat_id):
 @dp.message(StateFilter(default_state, States.already_started), Command(commands=["start"]))
 async def start_handler(message: Message, state: FSMContext):
     if not message.from_user.username:
-        await bot.send_message(message.chat_id, "Для использования этого бота вам необходимо иметь юзернейм для Телеграма!\nНастроить его можно в настройках профиля")
+        await bot.send_message(message.chat.id, "Для использования этого бота вам необходимо иметь юзернейм для Телеграма!\nНастроить его можно в настройках профиля")
         return
     await state.set_state(States.already_started)
     users_list = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
