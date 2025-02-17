@@ -249,7 +249,7 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
     friend_name = (await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend_id, )))[0]
 
     wishes = [i[0] for i in await db.fetch_all(
-        f"SELECT * FROM {friend_name}")]
+        f"SELECT * FROM {friend_name.lower()}")]
 
     if not wishes:
         await bot.send_message(callback_query.from_user.id, f"Вишлист @{friend_name} пуст.")
