@@ -331,9 +331,10 @@ async def adding_friend(message: Message, state: FSMContext):
 async def accept_friend(callback_query: CallbackQuery):
     friend_id = callback_query.data.split('^')[1]
     user_id = callback_query.from_user.id
+    friend_name = (await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend_id, )))[0]
     await callback_query.answer()
-    await bot.send_message(int(friend_id), f"@{user_id} принял ваш запрос дружбы.")
-    await bot.send_message(int(user_id), f"Вы добавили @{friend_id} в друзья.")
+    await bot.send_message(int(friend_id), f"@{callback_query.from_user.username} принял ваш запрос дружбы.")
+    await bot.send_message(int(user_id), f"Вы добавили @{friend_name} в друзья.")
     await db.execute("UPDATE friends_list SET status = 'accepted' WHERE user_1 IN (%s, %s) AND user_2 IN (%s, %s)", (user_id, friend_id, user_id, friend_id))
 
 
