@@ -159,7 +159,7 @@ async def start_handler(message: Message, state: FSMContext):
                 (message.from_user.id, message.from_user.username),
             )
             await db.execute(
-                f"CREATE TABLE {message.from_user.username.lower()} (stuff_link VARCHAR(2048))"
+                f"CREATE TABLE {message.from_user.username} (stuff_link VARCHAR(2048))"
             )
 
             await bot.send_message(
@@ -242,7 +242,7 @@ async def adding_item(message: Message, state: FSMContext):
         goods = [
             i[0]
             for i in await db.fetch_all(
-                f"SELECT stuff_link FROM {message.from_user.username.lower()}"
+                f"SELECT stuff_link FROM {message.from_user.username}"
             )
         ]
 
@@ -261,7 +261,7 @@ async def adding_item(message: Message, state: FSMContext):
                 return
 
             await db.execute(
-                f"INSERT INTO {message.from_user.username.lower()} VALUES (%s)",
+                f"INSERT INTO {message.from_user.username} VALUES (%s)",
                 (item_link,),
             )
             await bot.send_message(
@@ -311,14 +311,15 @@ async def delete_item(callback_query: CallbackQuery, state: FSMContext):
 
         wishes = [
             i[0]
-            for i in await db.fetch_all(f"SELECT stuff_link FROM {username.lower()}")
+            for i in await db.fetch_all(f"SELECT stuff_link FROM {username}")
         ]
 
         # Удаляем товар по индексу
         if 0 <= item_index < len(wishes):
             deleted_item = wishes[item_index]
             await db.execute(
-                f"DELETE FROM {username.lower()} WHERE stuff_link = %s", (deleted_item,)
+                f"DELETE FROM {username} WHERE stuff_link = %s", (
+                    deleted_item,)
             )
 
             await callback_query.answer("Товар удален")
@@ -395,7 +396,7 @@ async def deleting_item_handler(message: Message, state: FSMContext):
         wishes = [
             i[0]
             for i in await db.fetch_all(
-                f"SELECT stuff_link FROM {message.from_user.username.lower()}"
+                f"SELECT stuff_link FROM {message.from_user.username}"
             )
         ]
 
@@ -454,7 +455,7 @@ async def my_wishlist_handler(message: Message):
         wishlist = [
             i[0]
             for i in await db.fetch_all(
-                f"SELECT * FROM {message.from_user.username.lower()}"
+                f"SELECT * FROM {message.from_user.username}"
             )
         ]
 
@@ -617,7 +618,7 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
         )[0]
 
         wishes = [
-            i[0] for i in await db.fetch_all(f"SELECT * FROM {friend_name.lower()}")
+            i[0] for i in await db.fetch_all(f"SELECT * FROM {friend_name}")
         ]
 
         if not wishes:
