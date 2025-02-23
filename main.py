@@ -8,6 +8,7 @@ from aiogram.filters.state import StateFilter
 from aiogram.fsm.state import StatesGroup, State, default_state
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from emoji import emojize
 import platform
 import requests
 from datetime import datetime
@@ -19,7 +20,7 @@ from database import db
 
 # Конфигурация
 SCRIPT_DIR = config.LOG_DIR
-ITEMS_PER_PAGE = 5
+ITEMS_PER_PAGE = 3
 
 token = config.BOT_TOKEN
 bot = Bot(token=token)
@@ -310,8 +311,7 @@ async def delete_item(callback_query: CallbackQuery, state: FSMContext):
         username = callback_query.from_user.username
 
         wishes = [
-            i[0]
-            for i in await db.fetch_all(f"SELECT stuff_link FROM {username}")
+            i[0] for i in await db.fetch_all(f"SELECT stuff_link FROM {username}")
         ]
 
         # Удаляем товар по индексу
@@ -454,9 +454,7 @@ async def my_wishlist_handler(message: Message):
     try:
         wishlist = [
             i[0]
-            for i in await db.fetch_all(
-                f"SELECT * FROM {message.from_user.username}"
-            )
+            for i in await db.fetch_all(f"SELECT * FROM {message.from_user.username}")
         ]
 
         if not wishlist:
@@ -574,22 +572,36 @@ async def show_friends_page(message: types.Message, user_id: int, page: int):
         if page > 0:
             row.append(
                 types.InlineKeyboardButton(
-                    text="Назад", callback_data=f"page_{page - 1}"
+                    text=emojize(":left_arrow:"), callback_data=f"page_{page - 1}"
                 )
             )
         if (page + 1) * ITEMS_PER_PAGE < total_friends:
             row.append(
                 types.InlineKeyboardButton(
-                    text="Вперед", callback_data=f"page_{page + 1}"
+                    text=emojize(":right_arrow:"), callback_data=f"page_{page + 1}"
                 )
             )
         if row:
             builder.row(*row)
 
-        # Отправляем сообщение с кнопками
-        await message.answer(
-            f"Страница {page + 1}. Выберите друга:", reply_markup=builder.as_markup()
-        )
+        # Редактируем сообщение, если оно уже существует
+        if hasattr(message, "message_id") and message.message_id:
+            try:
+                await message.bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=message.message_id,
+                    text=f"Страница {page + 1}. Выберите друга:",
+                    reply_markup=builder.as_markup()
+                )
+            except Exception as e:
+                await message.answer(
+                    f"Страница {page + 1}. Выберите друга:", reply_markup=builder.as_markup()
+                )
+        else:
+            # Если сообщение новое (например, первая страница)
+            await message.answer(
+                f"Страница {page + 1}. Выберите друга:", reply_markup=builder.as_markup()
+            )
         log_user_action(
             user_id,
             (
@@ -617,9 +629,7 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
             await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend_id,))
         )[0]
 
-        wishes = [
-            i[0] for i in await db.fetch_all(f"SELECT * FROM {friend_name}")
-        ]
+        wishes = [i[0] for i in await db.fetch_all(f"SELECT * FROM {friend_name}")]
 
         if not wishes:
             await bot.send_message(
