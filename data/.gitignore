@@ -1,0 +1,5 @@
+data/.env
+data/logs/database.log
+data/logs/errors.log
+data/logs/start.log
+data/logs/user_actions.log
