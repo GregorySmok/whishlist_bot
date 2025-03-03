@@ -1,30 +1,30 @@
 import asyncio
+from typing import Callable, Dict, Any, Awaitable
 from aiogram import F
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram import Bot, Dispatcher, types, BaseMiddleware
 from aiogram.types import Message, CallbackQuery
-from aiogram.enums.parse_mode import ParseMode
 from aiogram.filters import Command
 from aiogram.filters.state import StateFilter
 from aiogram.fsm.state import StatesGroup, State, default_state
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from emoji import emojize
+from aiogram.dispatcher.event.bases import CancelHandler
 import platform
 import requests
 from datetime import datetime
 import logging
 import traceback
-from pathlib import Path
 from data import config
 from database import db
 
 # Конфигурация
 SCRIPT_DIR = config.LOG_DIR
 ITEMS_PER_PAGE = 3
-
 token = config.BOT_TOKEN
 bot = Bot(token=token)
-dp = Dispatcher()
+dp = Dispatcher(storage=MemoryStorage())
 
 # Настройка основного логгера
 logger = logging.getLogger(__name__)
@@ -87,6 +87,39 @@ class States(StatesGroup):
     deleting_item = State()
     viewing_wishlists = State()
     adding_friend = State()
+    admin = State()
+
+
+class BanMiddleware(BaseMiddleware):
+    def __init__(self):
+        super().__init__()
+
+    async def __call__(
+        self,
+        handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
+        event: Message,
+        data: Dict[str, Any],
+    ) -> Any:
+        # Проверяем, находится ли пользователь в бан-листе
+        user_id = event.from_user.username
+
+        # Здесь выполняем запрос к базе данных для проверки
+        is_banned = await self.check_if_banned(user_id)
+
+        if is_banned:
+            # Если пользователь в бан-листе, прерываем обработку
+            # Можно также отправить сообщение о том, что пользователь заблокирован
+            await event.answer("Вы заблокированы")
+            raise CancelHandler()
+
+        # Если пользователь не в бан-листе, продолжаем обработку
+        return await handler(event, data)
+
+    async def check_if_banned(self, user_id: str) -> bool:
+        result = await db.fetch_one(
+            "SELECT * FROM banlist WHERE username = %s", (user_id,)
+        )
+        return result
 
 
 if platform.system() == "Windows":
@@ -130,6 +163,45 @@ async def set_default_keyboard(chat_id):
             chat_id,
             "Произошла ошибка при настройке клавиатуры. Пожалуйста, попробуйте позже или используйте текстовые команды.",
         )
+
+
+async def set_admin_keyboard(chat_id):
+    builder = ReplyKeyboardBuilder()
+    builder.row(types.KeyboardButton(text="/ban"),
+                types.KeyboardButton(text="/unban"))
+    builder.row(
+        types.KeyboardButton(text="/close"),
+    )
+    await bot.send_message(
+        chat_id,
+        "Admin panel activated",
+        reply_markup=builder.as_markup(resize_keyboard=True),
+    )
+
+
+@dp.message(StateFilter(States.already_started), Command(commands=["admin"]))
+async def admin_handler(message: Message, state: FSMContext):
+    if message.chat.id in config.admins:
+        await state.set_state(States.admin)
+        await set_admin_keyboard(message.chat.id)
+
+
+@dp.message(StateFilter(States.admin), Command(commands=["ban"]))
+async def ban_handler(message: Message):
+    user = message.text.split()[1]
+    await db.execute("INSERT INTO banlist (username) VALUES (%s)", (user,))
+
+
+@dp.message(StateFilter(States.admin), Command(commands=["unban"]))
+async def unban_handler(message: Message):
+    user = message.text.split()[1]
+    await db.execute("DELETE FROM banlist WHERE username = %s", (user,))
+
+
+@dp.message(StateFilter(States.admin), Command(commands=["close"]))
+async def close_handler(message: Message, state: FSMContext):
+    await state.set_state(States.already_started)
+    await set_default_keyboard(message.chat.id)
 
 
 @dp.message(
@@ -591,16 +663,18 @@ async def show_friends_page(message: types.Message, user_id: int, page: int):
                     chat_id=message.chat.id,
                     message_id=message.message_id,
                     text=f"Страница {page + 1}. Выберите друга:",
-                    reply_markup=builder.as_markup()
+                    reply_markup=builder.as_markup(),
                 )
             except Exception as e:
                 await message.answer(
-                    f"Страница {page + 1}. Выберите друга:", reply_markup=builder.as_markup()
+                    f"Страница {page + 1}. Выберите друга:",
+                    reply_markup=builder.as_markup(),
                 )
         else:
             # Если сообщение новое (например, первая страница)
             await message.answer(
-                f"Страница {page + 1}. Выберите друга:", reply_markup=builder.as_markup()
+                f"Страница {page + 1}. Выберите друга:",
+                reply_markup=builder.as_markup(),
             )
         log_user_action(
             user_id,
@@ -997,6 +1071,7 @@ async def main():
 
 
 if __name__ == "__main__":
+    dp.message.middleware(BanMiddleware())
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
