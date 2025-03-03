@@ -1044,6 +1044,11 @@ async def reject_friend(callback_query: CallbackQuery):
         )
 
 
+@dp.message(StateFilter(default_state))
+async def refresh_handler(message: Message):
+    await bot.send_message(message.from_user_id, "Сервер был перезагружен. Нажмите /start")
+
+
 async def on_shutdown():
     logger.info("Starting bot shutdown...")
     try:
