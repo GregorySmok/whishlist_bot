@@ -1044,7 +1044,7 @@ async def reject_friend(callback_query: CallbackQuery):
         )
 
 
-@dp.message(StateFilter(default_state))
+@dp.message(default_state)
 async def refresh_handler(message: Message):
     await bot.send_message(message.from_user_id, "Сервер был перезагружен. Нажмите /start")
 
