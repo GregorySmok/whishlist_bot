@@ -1,34 +1,43 @@
 from datetime import datetime, timedelta
-from time import sleep
-import os
+import time
 
 
 def clean_log_file(log_file_path):
     while True:
         try:
-            now = datetime.now()
-            two_days_ago = now - timedelta(days=2)
-            temp_file_path = log_file_path + '.tmp'
+            # Определяем временную границу (2 дня назад)
+            cutoff_time = datetime.now() - timedelta(days=2)
 
-            with open(log_file_path, 'r') as log_file, open(temp_file_path, 'w') as temp_file:
-                for line in log_file:
+            # Читаем все строки из исходного файла
+            with open(log_file_path, 'r') as f:
+                lines = f.readlines()
+
+            # Фильтруем строки
+            filtered_lines = []
+            for line in lines:
+                try:
                     log_time_str = line.split(' - ')[0]
                     log_time = datetime.strptime(
                         log_time_str, '%Y-%m-%d %H:%M:%S,%f')
-                    if log_time >= two_days_ago:
-                        temp_file.write(line)
+                    if log_time >= cutoff_time:
+                        filtered_lines.append(line)
+                except:
+                    continue  # Пропускаем некорректные записи
 
-            os.replace(temp_file_path, log_file_path)
-            break  # Выход из цикла, если очистка прошла успешно
+            # Перезаписываем исходный файл
+            with open(log_file_path, 'w') as f:
+                f.writelines(filtered_lines)
+
+            # Сохраняем метаданные (права и владельца)
+            # stat = os.stat(log_file_path)
+            # os.chown(log_file_path, stat.st_uid, stat.st_gid)
+            # os.chmod(log_file_path, stat.st_mode)
+
         except Exception as e:
-            print(
-                f"Ошибка при очистке файла логов: {e}. Повторная попытка через 5 секунд...")
-            sleep(5)
-        finally:
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+            print(f"Ошибка: {e}. Повтор через 5 секунд...")
+            time.sleep(5)  # 5 минут перед повторной попыткой
+            continue
 
 
 if __name__ == "__main__":
-    log_file_path = 'data/logs/user_actions.log'
-    clean_log_file(log_file_path)
+    clean_log_file('/opt/whishlist_bot/data/logs/user_actions.log')
