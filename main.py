@@ -201,7 +201,14 @@ async def unban_handler(message: Message):
     text = message.text.split()[1]
     users = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
     for user in users:
-        await bot.send_message(user, text)
+        try:
+            await bot.send_message(user, text)
+        except Exception as e:
+            log_error(
+                message.from_user.id,
+                f"Error sending notification: {e}",
+                traceback.format_exc(),
+            )
 
 
 @dp.message(StateFilter(States.admin), Command(commands=["close"]))
