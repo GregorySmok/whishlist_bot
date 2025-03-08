@@ -347,7 +347,7 @@ async def adding_item(message: Message, state: FSMContext):
                 return
 
             await db.execute(
-                f"INSERT INTO {message.from_user.username} VALUES (%s)",
+                f"INSERT INTO {message.from_user.username} (stuff_link) VALUES (%s)",
                 (item_link,),
             )
             await bot.send_message(
