@@ -167,8 +167,6 @@ async def set_default_keyboard(chat_id):
 
 async def set_admin_keyboard(chat_id):
     builder = ReplyKeyboardBuilder()
-    builder.row(types.KeyboardButton(text="/ban"),
-                types.KeyboardButton(text="/unban"))
     builder.row(
         types.KeyboardButton(text="/close"),
     )
@@ -196,6 +194,14 @@ async def ban_handler(message: Message):
 async def unban_handler(message: Message):
     user = message.text.split()[1]
     await db.execute("DELETE FROM banlist WHERE username = %s", (user,))
+
+
+@dp.message(StateFilter(States.admin), Command(commands=["notification"]))
+async def unban_handler(message: Message):
+    text = message.text.split()[1]
+    users = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
+    for user in users:
+        await bot.send_message(user, text)
 
 
 @dp.message(StateFilter(States.admin), Command(commands=["close"]))
@@ -232,7 +238,7 @@ async def start_handler(message: Message, state: FSMContext):
                 (message.from_user.id, message.from_user.username),
             )
             await db.execute(
-                f"CREATE TABLE {message.from_user.username} (stuff_link VARCHAR(2048))"
+                f"CREATE TABLE {message.from_user.username} (id INT AUTO_INCREMENT PRIMARY KEY, stuff_link VARCHAR(2048))"
             )
 
             await bot.send_message(
@@ -703,7 +709,7 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
             await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend_id,))
         )[0]
 
-        wishes = [i[0] for i in await db.fetch_all(f"SELECT * FROM {friend_name}")]
+        wishes = [i for i in await db.fetch_all(f"SELECT * FROM {friend_name}")]
 
         if not wishes:
             await bot.send_message(
@@ -720,8 +726,31 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
             return
 
         await bot.send_message(callback_query.from_user.id, f"Вишлист @{friend_name}:")
-        for link in wishes:
-            await bot.send_message(callback_query.from_user.id, link)
+        for link, id_ in wishes:
+            builder = InlineKeyboardBuilder()
+            someone_want = (await db.fetch_one("SELECT gifter FROM want_to_present WHERE host_list = %s AND gift = %s", (friend_name, id_)))
+            if someone_want:
+                someone_want = someone_want[0]
+                if someone_want == callback_query.from_user.username:
+                    builder.add(
+                        types.InlineKeyboardButton(
+                            text="Вы уже дарите это", callback_data=f"want_{friend_name}_{id_}_del"
+                        )
+                    )
+                elif someone_want != callback_query.from_user.username:
+                    builder.add(
+                        types.InlineKeyboardButton(
+                            text=f"Это уже дарит @{someone_want}", callback_data="none"
+                        )
+                    )
+            else:
+                builder.add(
+                    types.InlineKeyboardButton(
+                        text="Хочу подарить", callback_data=f"want_{friend_name}_{id_}_add"
+                    )
+                )
+
+            await bot.send_message(callback_query.from_user.id, link, reply_markup=builder.as_markup())
 
         log_user_action(
             callback_query.from_user.id,
@@ -744,6 +773,46 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
             callback_query.from_user.id,
             "Произошла ошибка при загрузке вишлиста друга. Пожалуйста, попробуйте позже.",
         )
+
+
+@dp.callback_query(F.data.startswith("want_"))
+async def want_to_gift(callback_query: CallbackQuery):
+    try:
+        friend_name, gift_id, action = callback_query.data.split("_")[1::]
+        new_markup = InlineKeyboardBuilder()
+        if action == "del":
+            await db.execute(
+                "DELETE FROM want_to_present WHERE host_list = %s AND gift = %s AND gifter = %s",
+                (friend_name, gift_id, callback_query.from_user.username),
+            )
+            new_markup.add(types.InlineKeyboardButton(
+                text="Хочу подарить", callback_data=f"want_{friend_name}_{gift_id}_add"))
+        elif action == "add":
+            await db.execute(
+                "INSERT INTO want_to_present (host_list, gift, gifter) VALUES (%s, %s, %s)",
+                (friend_name, gift_id, callback_query.from_user.username),
+            )
+            new_markup.add(types.InlineKeyboardButton(
+                text="Вы уже дарите это", callback_data=f"want_{friend_name}_{gift_id}_del"))
+        await callback_query.message.edit_reply_markup(reply_markup=new_markup.as_markup())
+        await callback_query.answer()
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        log_error(
+            callback_query.from_user.id,
+            f"Error in want_to_gift: {e}",
+            error_traceback,
+        )
+        await callback_query.answer("Произошла ошибка")
+        await bot.send_message(
+            callback_query.from_user.id,
+            "Произошла ошибка при изменении статуса дарения. Пожалуйста, попробуйте позже.",
+        )
+
+
+@dp.callback_query(F.data.startswith("none"))
+async def none_handler(callback_query: CallbackQuery):
+    await callback_query.answer()
 
 
 @dp.callback_query(F.data.startswith("page_"))
