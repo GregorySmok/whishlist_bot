@@ -198,7 +198,7 @@ async def unban_handler(message: Message):
 
 @dp.message(StateFilter(States.admin), Command(commands=["notification"]))
 async def unban_handler(message: Message):
-    text = message.text.split()[1]
+    text = message.text.split("_")[1]
     users = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
     for user in users:
         try:
