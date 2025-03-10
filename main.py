@@ -15,7 +15,7 @@ import platform
 import requests
 from datetime import datetime
 import traceback
-from . import config
+import config
 from database import db
 from logging_setup import logger, log_user_action, log_error
 

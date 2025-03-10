@@ -2,7 +2,7 @@ from typing import Optional, List
 import aiomysql
 from contextlib import asynccontextmanager
 import logging
-from . import config
+import config
 
 
 class DatabaseManager:
