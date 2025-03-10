@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import time
+import os
 
 
 def clean_log_file(log_file_path):
@@ -29,9 +30,9 @@ def clean_log_file(log_file_path):
                 f.writelines(filtered_lines)
 
             # Сохраняем метаданные (права и владельца)
-            # stat = os.stat(log_file_path)
-            # os.chown(log_file_path, stat.st_uid, stat.st_gid)
-            # os.chmod(log_file_path, stat.st_mode)
+            stat = os.stat(log_file_path)
+            os.chown(log_file_path, stat.st_uid, stat.st_gid)
+            os.chmod(log_file_path, stat.st_mode)
 
         except Exception as e:
             print(f"Ошибка: {e}. Повтор через 5 секунд...")
