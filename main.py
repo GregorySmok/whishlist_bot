@@ -14,71 +14,15 @@ from aiogram.dispatcher.event.bases import CancelHandler
 import platform
 import requests
 from datetime import datetime
-import logging
 import traceback
-from data import config
+from . import config
 from database import db
+from logging_setup import logger, log_user_action, log_error
 
-# Конфигурация
-SCRIPT_DIR = config.LOG_DIR
 ITEMS_PER_PAGE = 3
 token = config.BOT_TOKEN
 bot = Bot(token=token)
 dp = Dispatcher(storage=MemoryStorage())
-
-# Настройка основного логгера
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.FileHandler(SCRIPT_DIR / "start.log", encoding="utf-8")
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logging.getLogger("aiogram.event").setLevel(logging.WARNING)
-
-# Настройка логгера для действий пользователя
-user_logger = logging.getLogger("user_actions")
-user_logger.setLevel(logging.INFO)
-user_handler = logging.FileHandler(
-    SCRIPT_DIR / "user_actions.log", encoding="utf-8")
-user_formatter = logging.Formatter(
-    "%(asctime)s - USER_ID: %(user_id)s - USERNAME: %(username)s - ACTION: %(action)s - DETAILS: %(details)s"
-)
-user_handler.setFormatter(user_formatter)
-user_logger.addHandler(user_handler)
-
-# Настройка логгера для ошибок
-error_logger = logging.getLogger("error_log")
-error_logger.setLevel(logging.ERROR)
-error_handler = logging.FileHandler(
-    SCRIPT_DIR / "errors.log", encoding="utf-8")
-error_formatter = logging.Formatter(
-    "%(asctime)s - USER_ID: %(user_id)s - ERROR: %(error)s - TRACEBACK: %(traceback)s"
-)
-error_handler.setFormatter(error_formatter)
-error_logger.addHandler(error_handler)
-
-
-def log_user_action(user_id, username, action, details=""):
-    """Логирует действия пользователя"""
-    user_logger.info(
-        "",
-        extra={
-            "user_id": user_id,
-            "username": username,
-            "action": action,
-            "details": details,
-        },
-    )
-
-
-def log_error(user_id, error, error_traceback=""):
-    """Логирует ошибки с идентификатором пользователя"""
-    error_logger.error(
-        "",
-        extra={"user_id": user_id, "error": str(
-            error), "traceback": error_traceback},
-    )
 
 
 class States(StatesGroup):
