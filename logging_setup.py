@@ -1,8 +1,7 @@
 # file: logging_setup.py
 import logging
 import config
-from pathlib import Path
-from locked_log_handler import LockedFileHandler, LockedRotatingFileHandler
+from file_lock_handler import LockedFileHandler, LockedRotatingFileHandler
 
 # Определение директории скрипта
 SCRIPT_DIR = config.LOG_DIR
@@ -14,6 +13,10 @@ def setup_logging():
     # Основной логгер
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
+
+    # Очищаем существующие обработчики (если есть)
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
     # Используем LockedFileHandler вместо FileHandler
     handler = LockedFileHandler(SCRIPT_DIR / "start.log", encoding="utf-8")
@@ -28,6 +31,10 @@ def setup_logging():
     # Логгер для действий пользователя
     user_logger = logging.getLogger("user_actions")
     user_logger.setLevel(logging.INFO)
+
+    # Очищаем существующие обработчики (если есть)
+    if user_logger.hasHandlers():
+        user_logger.handlers.clear()
 
     # Используем LockedRotatingFileHandler для автоматической ротации логов
     user_handler = LockedRotatingFileHandler(
@@ -45,6 +52,10 @@ def setup_logging():
     # Логгер для ошибок
     error_logger = logging.getLogger("error_log")
     error_logger.setLevel(logging.ERROR)
+
+    # Очищаем существующие обработчики (если есть)
+    if error_logger.hasHandlers():
+        error_logger.handlers.clear()
 
     # Используем LockedFileHandler для ошибок
     error_handler = LockedFileHandler(

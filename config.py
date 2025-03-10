@@ -15,6 +15,6 @@ MYSQLPASSWORD = str(os.getenv("PASSWORD"))
 MYSQLDB = str(os.getenv("DB"))
 
 BASE_DIR = Path(__file__).resolve().parent
-LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR = BASE_DIR / "data" / 'logs'
 
 admins = [2040304896]

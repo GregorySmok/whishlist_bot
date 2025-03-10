@@ -4,7 +4,7 @@ import time
 import datetime
 import re
 from pathlib import Path
-from locked_log_handler import lock_manager
+from file_lock_handler import FileLock
 import logging
 from datetime import datetime, timedelta
 
@@ -74,58 +74,52 @@ def clean_log_by_date(log_path):
     cleaner_logger.info(
         f"Очистка лог-файла {log_path}. Удаляем записи старше {threshold_date}")
 
-    # Получаем блокировку
-    lock = lock_manager.get_lock(log_path)
-    lock.acquire()
+    # Используем FileLock вместо старого lock_manager
+    with FileLock(log_path):
+        try:
+            # Читаем содержимое файла
+            with open(log_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
 
-    try:
-        # Читаем содержимое файла
-        with open(log_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+            # Подсчитываем исходное количество строк
+            original_count = len(lines)
 
-        # Подсчитываем исходное количество строк
-        original_count = len(lines)
+            # Фильтруем строки по дате
+            filtered_lines = []
+            removed_count = 0
 
-        # Фильтруем строки по дате
-        filtered_lines = []
-        removed_count = 0
+            for line in lines:
+                if not line.strip():  # Пропускаем пустые строки
+                    filtered_lines.append(line)
+                    continue
 
-        for line in lines:
-            if not line.strip():  # Пропускаем пустые строки
-                filtered_lines.append(line)
-                continue
+                log_date = parse_log_date(line, log_path)
 
-            log_date = parse_log_date(line, log_path)
+                # Если не смогли распознать дату или дата новее пороговой, сохраняем строку
+                if log_date is None or log_date >= threshold_date:
+                    filtered_lines.append(line)
+                else:
+                    removed_count += 1
 
-            # Если не смогли распознать дату или дата новее пороговой, сохраняем строку
-            if log_date is None or log_date >= threshold_date:
-                filtered_lines.append(line)
+            # Если были удалены записи, переписываем файл
+            if removed_count > 0:
+                # Пишем в новый временный файл
+                temp_path = f"{log_path}.temp"
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    f.writelines(filtered_lines)
+
+                # Заменяем старый файл новым
+                os.replace(temp_path, log_path)
+
+                cleaner_logger.info(
+                    f"Лог-файл {log_path} очищен. Удалено строк: {removed_count} из {original_count}")
             else:
-                removed_count += 1
+                cleaner_logger.info(
+                    f"В лог-файле {log_path} нет записей старше {MAX_LOG_AGE_DAYS} дней.")
 
-        # Если были удалены записи, переписываем файл
-        if removed_count > 0:
-            # Пишем в новый временный файл
-            temp_path = f"{log_path}.temp"
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                f.writelines(filtered_lines)
-
-            # Заменяем старый файл новым
-            os.replace(temp_path, log_path)
-
-            cleaner_logger.info(
-                f"Лог-файл {log_path} очищен. Удалено строк: {removed_count} из {original_count}")
-        else:
-            cleaner_logger.info(
-                f"В лог-файле {log_path} нет записей старше {MAX_LOG_AGE_DAYS} дней.")
-
-    except Exception as e:
-        cleaner_logger.error(
-            f"Ошибка при очистке лог-файла {log_path}: {str(e)}")
-
-    finally:
-        # Освобождаем блокировку
-        lock.release()
+        except Exception as e:
+            cleaner_logger.error(
+                f"Ошибка при очистке лог-файла {log_path}: {str(e)}")
 
 
 def clean_old_rotated_logs():
@@ -138,6 +132,10 @@ def clean_old_rotated_logs():
 
         # Ищем ротированные логи (обычно имеют формат filename.log.1, filename.log.2 и т.д.)
         for file in log_dir.glob(f"{log_name}.*"):
+            # Исключаем файлы блокировок (.lock)
+            if str(file).endswith('.lock'):
+                continue
+
             # Проверяем возраст файла
             file_age_days = (now - os.path.getmtime(file)) / (24 * 60 * 60)
 
