@@ -6,10 +6,11 @@ import re
 from pathlib import Path
 from file_lock_handler import FileLock
 import logging
+import config
 from datetime import datetime, timedelta
 
 # Определение директории скрипта
-SCRIPT_DIR = Path(__file__).parent
+SCRIPT_DIR = config.LOG_DIR
 
 # Настройки для очистки
 MAX_LOG_AGE_DAYS = 2  # Очищаем записи старше 2 дней
