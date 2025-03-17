@@ -205,7 +205,7 @@ async def start_handler(message: Message, state: FSMContext):
         else:
             await bot.send_message(
                 message.from_user.id,
-                f"Привет, {message.from_user.username}! Что хочешь сделать?",
+                f"Привет, {message.from_user.username}! Что хочешь сделать ?",
             )
             log_user_action(
                 message.from_user.id,
@@ -340,16 +340,18 @@ async def delete_item(callback_query: CallbackQuery, state: FSMContext):
         username = callback_query.from_user.username
 
         wishes = [
-            i[0] for i in await db.fetch_all(f"SELECT stuff_link FROM {username}")
+            i for i in await db.fetch_all(f"SELECT stuff_link, id FROM {username}")
         ]
 
         # Удаляем товар по индексу
-        if 0 <= item_index < len(wishes):
-            deleted_item = wishes[item_index]
+        if item_index in [i[1] for i in wishes]:
+            deleted_item = list(
+                filter(lambda x: x[1] == item_index, wishes))[0][0]
             await db.execute(
                 f"DELETE FROM {username} WHERE stuff_link = %s", (
                     deleted_item,)
             )
+            await db.execute("DELETE FROM want_to_present WHERE host_list = %s AND gift = %s", (username, item_index))
 
             await callback_query.answer("Товар удален")
             await callback_query.message.delete()
@@ -423,9 +425,9 @@ async def deleting_item_handler(message: Message, state: FSMContext):
         )
 
         wishes = [
-            i[0]
+            i
             for i in await db.fetch_all(
-                f"SELECT stuff_link FROM {message.from_user.username}"
+                f"SELECT stuff_link, id FROM {message.from_user.username}"
             )
         ]
 
@@ -442,7 +444,7 @@ async def deleting_item_handler(message: Message, state: FSMContext):
             return
 
         # Отправляем каждый товар с кнопкой удаления
-        for index, item in enumerate(wishes):
+        for item, index in wishes:
             builder = InlineKeyboardBuilder()
             builder.add(
                 types.InlineKeyboardButton(
@@ -685,7 +687,7 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
                 if someone_want == callback_query.from_user.username:
                     builder.add(
                         types.InlineKeyboardButton(
-                            text="Вы уже дарите это", callback_data=f"want_{friend_name}_{id_}_del"
+                            text="Вы уже дарите это", callback_data=f"want^{friend_name}^{id_}^del"
                         )
                     )
                 elif someone_want != callback_query.from_user.username:
@@ -697,7 +699,7 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
             else:
                 builder.add(
                     types.InlineKeyboardButton(
-                        text="Хочу подарить", callback_data=f"want_{friend_name}_{id_}_add"
+                        text="Хочу подарить", callback_data=f"want^{friend_name}^{id_}^add"
                     )
                 )
 
@@ -726,25 +728,37 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
         )
 
 
-@dp.callback_query(F.data.startswith("want_"))
+@dp.callback_query(F.data.startswith("want^"))
 async def want_to_gift(callback_query: CallbackQuery):
     try:
-        friend_name, gift_id, action = callback_query.data.split("_")[1::]
+        friend_name, gift_id, action = callback_query.data.split("^")[1::]
+        skip = False
         new_markup = InlineKeyboardBuilder()
-        if action == "del":
-            await db.execute(
-                "DELETE FROM want_to_present WHERE host_list = %s AND gift = %s AND gifter = %s",
-                (friend_name, gift_id, callback_query.from_user.username),
-            )
-            new_markup.add(types.InlineKeyboardButton(
-                text="Хочу подарить", callback_data=f"want_{friend_name}_{gift_id}_add"))
-        elif action == "add":
-            await db.execute(
-                "INSERT INTO want_to_present (host_list, gift, gifter) VALUES (%s, %s, %s)",
-                (friend_name, gift_id, callback_query.from_user.username),
-            )
-            new_markup.add(types.InlineKeyboardButton(
-                text="Вы уже дарите это", callback_data=f"want_{friend_name}_{gift_id}_del"))
+        someone_want = (await db.fetch_one("SELECT gifter FROM want_to_present WHERE host_list = %s AND gift = %s", (friend_name, gift_id)))
+        if someone_want:
+            someone_want = someone_want[0]
+            if someone_want != callback_query.from_user.username:
+                new_markup.add(
+                    types.InlineKeyboardButton(
+                        text=f"Это уже дарит @{someone_want}", callback_data="none"
+                    )
+                )
+                skip = True
+        if not skip:
+            if action == "del":
+                await db.execute(
+                    "DELETE FROM want_to_present WHERE host_list = %s AND gift = %s AND gifter = %s",
+                    (friend_name, gift_id, callback_query.from_user.username),
+                )
+                new_markup.add(types.InlineKeyboardButton(
+                    text="Хочу подарить", callback_data=f"want_{friend_name}_{gift_id}_add"))
+            elif action == "add":
+                await db.execute(
+                    "INSERT INTO want_to_present (host_list, gift, gifter) VALUES (%s, %s, %s)",
+                    (friend_name, gift_id, callback_query.from_user.username),
+                )
+                new_markup.add(types.InlineKeyboardButton(
+                    text="Вы уже дарите это", callback_data=f"want_{friend_name}_{gift_id}_del"))
         await callback_query.message.edit_reply_markup(reply_markup=new_markup.as_markup())
         await callback_query.answer()
     except Exception as e:
@@ -957,7 +971,7 @@ async def adding_friend(message: Message, state: FSMContext):
 
         await bot.send_message(
             friend_id,
-            f"@{message.from_user.username} хочет добавить вас в друзья. Принять заявку?",
+            f"@{message.from_user.username} хочет добавить вас в друзья. Принять заявку%s",
             reply_markup=builder.as_markup(),
         )
 
