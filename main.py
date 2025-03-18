@@ -751,14 +751,14 @@ async def want_to_gift(callback_query: CallbackQuery):
                     (friend_name, gift_id, callback_query.from_user.username),
                 )
                 new_markup.add(types.InlineKeyboardButton(
-                    text="Хочу подарить", callback_data=f"want_{friend_name}_{gift_id}_add"))
+                    text="Хочу подарить", callback_data=f"want^{friend_name}^{gift_id}^add"))
             elif action == "add":
                 await db.execute(
                     "INSERT INTO want_to_present (host_list, gift, gifter) VALUES (%s, %s, %s)",
                     (friend_name, gift_id, callback_query.from_user.username),
                 )
                 new_markup.add(types.InlineKeyboardButton(
-                    text="Вы уже дарите это", callback_data=f"want_{friend_name}_{gift_id}_del"))
+                    text="Вы уже дарите это", callback_data=f"want^{friend_name}^{gift_id}^del"))
         await callback_query.message.edit_reply_markup(reply_markup=new_markup.as_markup())
         await callback_query.answer()
     except Exception as e:
