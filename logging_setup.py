@@ -40,8 +40,8 @@ def setup_logging():
     user_handler = LockedRotatingFileHandler(
         SCRIPT_DIR / "user_actions.log",
         encoding="utf-8",
-        maxBytes=10*1024*1024,  # 10 MB
-        backupCount=5
+        maxBytes=50*1024,  # 10 MB
+        backupCount=30
     )
     user_formatter = logging.Formatter(
         "%(asctime)s - USER_ID: %(user_id)s - USERNAME: %(username)s - ACTION: %(action)s - DETAILS: %(details)s"
@@ -58,9 +58,11 @@ def setup_logging():
         error_logger.handlers.clear()
 
     # Используем LockedFileHandler для ошибок
-    error_handler = LockedFileHandler(
+    error_handler = LockedRotatingFileHandler(  # Меняем на Rotating
         SCRIPT_DIR / "errors.log",
-        encoding="utf-8"
+        encoding="utf-8",
+        maxBytes=20*1024,  # 20 KB
+        backupCount=60
     )
     error_formatter = logging.Formatter(
         "%(asctime)s - USER_ID: %(user_id)s - ERROR: %(error)s - TRACEBACK: %(traceback)s"

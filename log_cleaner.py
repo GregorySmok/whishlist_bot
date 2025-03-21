@@ -76,10 +76,10 @@ def clean_log_by_date(log_path):
         f"Очистка лог-файла {log_path}. Удаляем записи старше {threshold_date}")
 
     # Используем FileLock вместо старого lock_manager
-    with FileLock(log_path):
+    with FileLock(log_path, timeout=60):
         try:
             # Читаем содержимое файла
-            with open(log_path, 'r', encoding='utf-8') as f:
+            with open(log_path, 'r+', encoding='utf-8') as f:
                 lines = f.readlines()
 
             # Подсчитываем исходное количество строк

@@ -11,7 +11,7 @@ from pathlib import Path
 class FileLock:
     """Блокировка на основе файловой системы"""
 
-    def __init__(self, file_path, timeout=10, delay=0.05):
+    def __init__(self, file_path, timeout=30, delay=0.1):
         """
         Инициализирует блокировку для указанного файла
 
@@ -52,7 +52,7 @@ class FileLock:
                         f"Не удалось получить блокировку для {self.file_path} за {self.timeout} секунд")
 
                 # Проверяем, не является ли файл блокировки осиротевшим
-                if os.path.exists(self.lockfile) and time.time() - os.path.getmtime(self.lockfile) > 60:
+                if os.path.exists(self.lockfile) and time.time() - os.path.getmtime(self.lockfile) > 30:
                     try:
                         os.remove(self.lockfile)
                         continue  # Пытаемся снова получить блокировку
