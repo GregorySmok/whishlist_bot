@@ -17,7 +17,7 @@ from datetime import datetime
 import traceback
 import config
 from database import db
-from logging_setup import logger, log_user_action, log_error
+from logging_setup import main_logger, log_user_action, log_error
 
 ITEMS_PER_PAGE = 3
 token = config.BOT_TOKEN
@@ -938,7 +938,7 @@ async def adding_friend(message: Message, state: FSMContext):
                         "DELETE FROM friends_list WHERE user_1 IN (%s, %s) AND user_2 IN (%s, %s)",
                         (user1, user2, user1, user2),
                     )
-                    logger.info(
+                    main_logger.info(
                         f"Deleted old friend request between {user1} and {user2}"
                     )
 
@@ -1084,29 +1084,29 @@ async def refresh_handler(message: Message):
 
 
 async def on_shutdown():
-    logger.info("Starting bot shutdown...")
+    main_logger.info("Starting bot shutdown...")
     try:
         await bot.session.close()
-        logger.info("Bot session was closed successfully")
+        main_logger.info("Bot session was closed successfully")
         await db.close()
     except Exception as e:
-        logger.info(f"Error with bot session closig: {e}")
+        main_logger.info(f"Error with bot session closig: {e}")
 
-    logger.info("Shutdown completed successfully")
+    main_logger.info("Shutdown completed successfully")
 
 
 async def main():
-    logger.info("Bot starting...")
+    main_logger.info("Bot starting...")
 
     try:
-        logger.info("Polling starting...")
+        main_logger.info("Polling starting...")
         await dp.start_polling(bot)
     except Exception as e:
-        logger.error(f"Critical error: {e}")
+        main_logger.error(f"Critical error: {e}")
         raise
     finally:
         await on_shutdown()
-        logger.info("Bot is stopped")
+        main_logger.info("Bot is stopped")
 
 
 if __name__ == "__main__":
@@ -1116,9 +1116,9 @@ if __name__ == "__main__":
         asyncio.set_event_loop(loop)
         loop.run_until_complete(main())
     except KeyboardInterrupt:
-        logger.info("Exit is caught...")
+        main_logger.info("Exit is caught...")
     except Exception as e:
-        logger.error(f"Uncaught error: {e}")
+        main_logger.error(f"Uncaught error: {e}")
     finally:
         try:
             tasks = asyncio.all_tasks(loop)
@@ -1129,5 +1129,5 @@ if __name__ == "__main__":
                     *tasks, return_exceptions=True))
             loop.close()
         except Exception as e:
-            logger.error(f"Error with loop closing: {e}")
-        logger.info("Program is fiished")
+            main_logger.error(f"Error with loop closing: {e}")
+        main_logger.info("Program is fiished")
