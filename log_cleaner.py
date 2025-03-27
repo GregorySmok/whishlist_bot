@@ -18,7 +18,7 @@ def clean_logs():
 
         try:
             # Извлекаем дату из имени файла
-            date_str = file.name.split('_')[1].split('.')[0]
+            date_str = file.name.split('_')[-1].split('.')[0]
             file_date = datetime.strptime(date_str, "%Y-%m-%d")
 
             if file_date < (datetime.now() - timedelta(days=MAX_LOG_AGE_DAYS)):
