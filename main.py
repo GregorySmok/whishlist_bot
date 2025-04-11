@@ -662,7 +662,7 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
             await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend_id,))
         )[0]
 
-        wishes = [i for i in await db.fetch_all(f"SELECT * FROM {friend_name}")]
+        wishes = [i for i in await db.fetch_all(f"SELECT id, stuff_link FROM {friend_name}")]
 
         if not wishes:
             await bot.send_message(
@@ -679,7 +679,7 @@ async def process_friend_selection(callback_query: types.CallbackQuery):
             return
 
         await bot.send_message(callback_query.from_user.id, f"Вишлист @{friend_name}:")
-        for link, id_ in wishes:
+        for id_, link in wishes:
             builder = InlineKeyboardBuilder()
             someone_want = (await db.fetch_one("SELECT gifter FROM want_to_present WHERE host_list = %s AND gift = %s", (friend_name, id_)))
             if someone_want:
@@ -971,7 +971,7 @@ async def adding_friend(message: Message, state: FSMContext):
 
         await bot.send_message(
             friend_id,
-            f"@{message.from_user.username} хочет добавить вас в друзья. Принять заявку%s",
+            f"@{message.from_user.username} хочет добавить вас в друзья. Принять заявку?",
             reply_markup=builder.as_markup(),
         )
 
