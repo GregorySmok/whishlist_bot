@@ -30,7 +30,6 @@ class States(StatesGroup):
     adding_item = State()
     deleting_item = State()
     viewing_wishlists = State()
-    adding_friend = State()
     admin = State()
 
 
