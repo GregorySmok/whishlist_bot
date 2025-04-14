@@ -810,59 +810,9 @@ async def process_page_selection(callback_query: types.CallbackQuery):
         )
 
 
-@dp.message(StateFilter(States.already_started), Command(commands=["добавить_друга"]))
-async def add_friend_handler(message: Message, state: FSMContext):
-    try:
-        # await state.set_state(States.adding_friend)
-        await bot.send_message(
-            message.chat.id,
-            "Чтобы добавить друга, отправьте его контакт или отправьте 0, чтобы завершить процесс:",
-        )
-        log_user_action(
-            message.from_user.id,
-            message.from_user.username,
-            "add_friend_started",
-            "User initiated adding friend",
-        )
-    except Exception as e:
-        error_traceback = traceback.format_exc()
-        log_error(
-            message.from_user.id, f"Error in add_friend_handler: {e}", error_traceback
-        )
-        await bot.send_message(
-            message.chat.id, "Произошла ошибка. Пожалуйста, попробуйте позже."
-        )
-        await state.set_state(States.already_started)
-        await set_default_keyboard(message.chat.id)
-
-
 @dp.message(StateFilter(States.already_started), F.user_shared)
 async def adding_friend(message: Message, state: FSMContext):
     try:
-        # if message.text == "0":
-        #    await bot.send_message(message.chat.id, "Добавление друга завершено.")
-        #    await state.set_state(States.already_started)
-        #    await set_default_keyboard(message.chat.id)
-        #    log_user_action(
-        #        message.from_user.id,
-        #        message.from_user.username,
-        #        "cancel_adding" "canceled friend addition",
-        #   )
-        #   return
-
-        # if not message.text.startswith("@"):
-        #    await bot.send_message(
-        #        message.chat.id,
-        #        "Введен неверный юзернейм. Формат юзернейма @username или 0 для завершения.",
-        #    )
-        #    log_user_action(
-        #        message.from_user.id,
-        #        message.from_user.username,
-        #        "invalid_input",
-        #        f"entered invalid username format: {message.text}",
-        #    )
-        #    return
-
         friend_id = message.user_shared.user_id
         users_list = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
 
@@ -921,7 +871,7 @@ async def adding_friend(message: Message, state: FSMContext):
                 if time_since_request < 5:
                     await bot.send_message(
                         message.chat.id,
-                        f"Предыдущий запрос @{username} был отправлен менее 5 минут. Попробуйте позже.",
+                        f"Предыдущий запрос @{username} был отправлен менее 5 минут  назад. Попробуйте позже.",
                     )
                     log_user_action(
                         message.from_user.id,
