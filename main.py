@@ -153,10 +153,10 @@ async def ban_handler(message: Message):
     user = message.text.split()[1]
     try:
         await db.execute("INSERT INTO banlist (username) VALUES (%s)", (user,))
-        bot.send_message(
+        await bot.send_message(
             message.chat.id, f"Пользователь @{user} успешно заблокирован.")
     except:
-        bot.send_message("Не удалось заблокировать этого пользователя")
+        await bot.send_message("Не удалось заблокировать этого пользователя")
 
 
 @dp.message(StateFilter(States.admin), Command(commands=["unban"]))
@@ -164,10 +164,10 @@ async def unban_handler(message: Message):
     user = message.text.split()[1]
     try:
         await db.execute("DELETE FROM banlist WHERE username = %s", (user,))
-        bot.send_message(
+        await bot.send_message(
             message.chat.id, f"Пользователь @{user} успешно разблокирован")
     except:
-        bot.send_message("Не удалось разблокировать этого пользователя")
+        await bot.send_message("Не удалось разблокировать этого пользователя")
 
 
 @dp.message(StateFilter(States.admin), Command(commands=["notification"]))
