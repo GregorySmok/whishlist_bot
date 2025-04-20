@@ -111,6 +111,8 @@ async def set_default_keyboard(chat_id):
 
 async def set_admin_keyboard(chat_id):
     builder = ReplyKeyboardBuilder()
+    builder.row(types.KeyboardButton(text="/users"),
+                types.KeyboardButton(text="/banlist"))
     builder.row(
         types.KeyboardButton(text="/close"),
     )
@@ -128,16 +130,44 @@ async def admin_handler(message: Message, state: FSMContext):
         await set_admin_keyboard(message.chat.id)
 
 
+@dp.message(StateFilter(States.admin), Command(commands=["users"]))
+async def get_users(message: Message):
+    users = [i[0] for i in await db.fetch_all("SELECT username FROM users")]
+    text = "Пользователи:\n"
+    for num, user in enumerate(users):
+        text += f"{num + 1}. @{user}\n"
+    await bot.send_message(message.chat.id, text)
+
+
+@dp.message(StateFilter(States.admin), Command(commands=["banlist"]))
+async def get_banlist(message: Message):
+    users = [i[0] for i in await db.fetch_all("SELECT username FROM banlist")]
+    text = "Заблокированные пользователи:\n"
+    for num, user in enumerate(users):
+        text += f"{num + 1}. @{user}\n"
+    await bot.send_message(message.chat.id, text)
+
+
 @dp.message(StateFilter(States.admin), Command(commands=["ban"]))
 async def ban_handler(message: Message):
     user = message.text.split()[1]
-    await db.execute("INSERT INTO banlist (username) VALUES (%s)", (user,))
+    try:
+        await db.execute("INSERT INTO banlist (username) VALUES (%s)", (user,))
+        bot.send_message(
+            message.chat.id, f"Пользователь @{user} успешно заблокирован.")
+    except:
+        bot.send_message("Не удалось заблокировать этого пользователя")
 
 
 @dp.message(StateFilter(States.admin), Command(commands=["unban"]))
 async def unban_handler(message: Message):
     user = message.text.split()[1]
-    await db.execute("DELETE FROM banlist WHERE username = %s", (user,))
+    try:
+        await db.execute("DELETE FROM banlist WHERE username = %s", (user,))
+        bot.send_message(
+            message.chat.id, f"Пользователь @{user} успешно разблокирован")
+    except:
+        bot.send_message("Не удалось разблокировать этого пользователя")
 
 
 @dp.message(StateFilter(States.admin), Command(commands=["notification"]))
