@@ -171,7 +171,7 @@ async def unban_handler(message: Message):
 
 
 @dp.message(StateFilter(States.admin), Command(commands=["notification"]))
-async def unban_handler(message: Message):
+async def notify_handler(message: Message):
     text = " ".join(message.text.split()[1:])
     users = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
     for user in users:
@@ -514,8 +514,8 @@ async def deleting_item_handler(message: Message, state: FSMContext):
 async def my_wishlist_handler(message: Message):
     try:
         wishlist = [
-            i[0]
-            for i in await db.fetch_all(f"SELECT * FROM {message.from_user.username}")
+            i
+            for i in await db.fetch_all(f"SELECT id, stuff_link FROM {message.from_user.username}")
         ]
 
         if not wishlist:
@@ -530,7 +530,7 @@ async def my_wishlist_handler(message: Message):
             return
 
         await bot.send_message(message.from_user.id, "Ваш вишлист:")
-        for link in wishlist:
+        for id_, link in wishlist:
             await bot.send_message(message.from_user.id, link)
 
         log_user_action(
