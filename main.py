@@ -530,7 +530,7 @@ async def my_wishlist_handler(message: Message):
             return
 
         await bot.send_message(message.from_user.id, "Ваш вишлист:")
-        for id_, link in wishlist:
+        for _, link in wishlist:
             await bot.send_message(message.from_user.id, link)
 
         log_user_action(
