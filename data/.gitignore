@@ -1,5 +1,0 @@
-.env
-logs/database.log
-logs/errors.log
-logs/start.log
-logs/user_actions.log
