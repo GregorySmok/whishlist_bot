@@ -1,7 +1,7 @@
 import time
 import os
 from pathlib import Path
-import config
+import config.config as config
 from datetime import datetime, timedelta
 
 MAX_LOG_AGE_DAYS = 2

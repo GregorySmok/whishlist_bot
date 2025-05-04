@@ -1,7 +1,6 @@
 import logging
 import time
-from pathlib import Path
-import config
+import config.config as config
 
 
 class AtomicFileHandler(logging.Handler):
