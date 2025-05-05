@@ -1,4 +1,3 @@
-from matplotlib import use
 from . import delete_item_handler
 from . import deleting_item
 from . import start_handler
