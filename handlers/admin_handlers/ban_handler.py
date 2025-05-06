@@ -4,6 +4,7 @@ from aiogram.filters.state import StateFilter
 from aiogram.filters import Command
 from database import db
 from shared import shared
+from log_setup import log_admin_action
 
 
 def setup(router):
@@ -14,5 +15,23 @@ def setup(router):
             await db.execute("INSERT INTO banlist (username) VALUES (%s)", (user,))
             await shared.bot.send_message(
                 message.chat.id, f"Пользователь @{user} успешно заблокирован.")
-        except:
-            await shared.bot.send_message("Не удалось заблокировать этого пользователя")
+            
+            # Логирование действия администратора
+            log_admin_action(
+                admin_id=message.chat.id,
+                admin_username=message.from_user.username or str(message.chat.id),
+                action="ban_user",
+                target=user,
+                details=f"Блокировка пользователя @{user}"
+            )
+        except Exception as e:
+            await shared.bot.send_message(message.chat.id, "Не удалось заблокировать этого пользователя")
+            
+            # Логирование ошибки
+            log_admin_action(
+                admin_id=message.chat.id,
+                admin_username=message.from_user.username or str(message.chat.id),
+                action="ban_user_failed",
+                target=user,
+                details=f"Ошибка при блокировке пользователя @{user}: {str(e)}"
+            )

@@ -4,6 +4,7 @@ from aiogram.filters.state import StateFilter
 from aiogram.filters import Command
 from database import db
 from shared import shared
+from log_setup import log_admin_action
 
 
 def setup(router):
@@ -14,3 +15,11 @@ def setup(router):
         for num, user in enumerate(users):
             text += f"{num + 1}. @{user}\n"
         await shared.bot.send_message(message.chat.id, text)
+        
+        # Логирование действия администратора
+        log_admin_action(
+            admin_id=message.chat.id,
+            admin_username=message.from_user.username or str(message.chat.id),
+            action="view_banlist",
+            details=f"Просмотр списка заблокированных пользователей (всего: {len(users)})"
+        )

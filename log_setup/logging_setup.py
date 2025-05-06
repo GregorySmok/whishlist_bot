@@ -55,12 +55,20 @@ def setup_logging():
     error_handler.setFormatter(logging.Formatter(
         "%(asctime)s - ERROR:%(error)s - USER:%(user_id)s - TRACEBACK:%(traceback)s"))
     error_logger.addHandler(error_handler)
+    
+    # Логгер действий администратора
+    admin_logger = logging.getLogger('admin_actions')
+    admin_logger.setLevel(logging.INFO)
+    admin_handler = AtomicFileHandler(config.LOG_DIR, 'admin_actions')
+    admin_handler.setFormatter(logging.Formatter(
+        "%(asctime)s - ADMIN:%(admin_id)s/%(admin_username)s - ACTION:%(action)s - TARGET:%(target)s - %(details)s"))
+    admin_logger.addHandler(admin_handler)
 
-    return main_logger, user_logger, error_logger
+    return main_logger, user_logger, error_logger, admin_logger
 
 
 # Инициализация логгеров
-main_logger, user_logger, error_logger = setup_logging()
+main_logger, user_logger, error_logger, admin_logger = setup_logging()
 
 
 def log_user_action(user_id, username, action, details=""):
@@ -77,4 +85,14 @@ def log_error(user_id, error, error_traceback=""):
         'user_id': user_id,
         'error': str(error),
         'traceback': error_traceback
+    })
+
+
+def log_admin_action(admin_id, admin_username, action, target="", details=""):
+    admin_logger.info("", extra={
+        'admin_id': admin_id,
+        'admin_username': admin_username,
+        'action': action,
+        'target': target,
+        'details': details
     })
