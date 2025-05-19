@@ -7,3 +7,4 @@ class States(StatesGroup):
     deleting_item = State()
     viewing_wishlists = State()
     admin = State()
+    deleting_friend = State()

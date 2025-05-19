@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from shared import shared
 from log_setup import log_user_action, log_error
 import traceback
-from keyboards.reply import set_default_keyboard
+from keyboards.reply import set_default_keyboard, set_edit_friends_button
 from utils import show_friends_page
 
 
@@ -21,6 +21,8 @@ def setup(router):
                 "view_friends_list",
                 "User viewed friends list",
             )
+            await set_edit_friends_button(message.from_user.id)
+
         except Exception as e:
             error_traceback = traceback.format_exc()
             log_error(message.from_user.id,

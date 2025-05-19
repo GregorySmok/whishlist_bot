@@ -3,7 +3,7 @@ from aiogram import types
 from shared import shared
 
 
-async def set_admin_keyboard(chat_id):
+async def set_admin_keyboard(chat_id: int):
     builder = ReplyKeyboardBuilder()
     builder.row(types.KeyboardButton(text="/users"),
                 types.KeyboardButton(text="/banlist"))

@@ -14,6 +14,8 @@ from . import adding_friend_handler
 from . import accept_request_handler
 from . import reject_request_handler
 from . import refresh_handler
+from . import back_handler
+from . import edit_friends_handler
 from aiogram import Router
 
 user_router = Router()
@@ -33,4 +35,6 @@ adding_friend_handler.setup(user_router)
 accept_request_handler.setup(user_router)
 reject_request_handler.setup(user_router)
 refresh_handler.setup(user_router)
+back_handler.setup(user_router)
+edit_friends_handler.setup(user_router)
 __all__ = ["user_router"]
