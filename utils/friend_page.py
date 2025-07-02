@@ -48,27 +48,29 @@ async def show_friends_page(message: Message, user_id: int, page: int):
 
         # Создаем клавиатуру с кнопками для друзей
         builder = await friends_list_kb(friends, total_friends, page)
+        text = f"Страница {page + 1}. Выберите друга:"
 
-        # Редактируем сообщение, если оно уже существует
+        # Проверяем, есть ли у message атрибут message_id (это CallbackQuery.message)
         if hasattr(message, "message_id") and message.message_id:
+            # Это навигация по страницам - удаляем старое и отправляем новое
             try:
-                await message.bot.edit_message_text(
-                    chat_id=message.chat.id,
-                    message_id=message.message_id,
-                    text=f"Страница {page + 1}. Выберите друга:",
-                    reply_markup=builder.as_markup(),
-                )
+                await message.delete()
             except Exception as e:
-                await message.answer(
-                    f"Страница {page + 1}. Выберите друга:",
-                    reply_markup=builder.as_markup(),
-                )
-        else:
-            # Если сообщение новое (например, первая страница)
-            await message.answer(
-                f"Страница {page + 1}. Выберите друга:",
+                print(f"Debug: Couldn't delete message: {e}")
+
+            # Отправляем новое сообщение напрямую в чат
+            await message.bot.send_message(
+                chat_id=message.chat.id,
+                text=text,
                 reply_markup=builder.as_markup(),
             )
+        else:
+            # Если сообщение новое (например, первая страница от команды)
+            await message.answer(
+                text,
+                reply_markup=builder.as_markup(),
+            )
+
         log_user_action(
             user_id,
             (

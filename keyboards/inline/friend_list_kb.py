@@ -7,6 +7,8 @@ from emoji import emojize
 
 async def friends_list_kb(friends, total_friends, page):
     builder = InlineKeyboardBuilder()
+
+    # Добавляем кнопки друзей
     for friend in friends:
         friend_name = (
             await db.fetch_one(
@@ -19,20 +21,28 @@ async def friends_list_kb(friends, total_friends, page):
             )
         )
 
-    # Добавляем кнопки для навигации (расположим в отдельном ряду)
-    row = []
+    # Создаем ряд для навигационных кнопок
+    navigation_buttons = []
+
+    # Кнопка "Назад"
     if page > 0:
-        row.append(
+        navigation_buttons.append(
             types.InlineKeyboardButton(
-                text=emojize(":left_arrow:"), callback_data=f"page_{page - 1}"
+                text=emojize(":left_arrow:"),
+                callback_data=f"page_{page - 1}"
             )
         )
+
+    # Кнопка "Вперед"
     if (page + 1) * ITEMS_PER_PAGE < total_friends:
-        row.append(
+        navigation_buttons.append(
             types.InlineKeyboardButton(
-                text=emojize(":right_arrow:"), callback_data=f"page_{page + 1}"
+                text=emojize(":right_arrow:"),
+                callback_data=f"page_{page + 1}"
             )
         )
-    if row:
-        builder.row(*row)
+
+    # Добавляем навигационные кнопки в отдельный ряд
+    if navigation_buttons:
+        builder.row(*navigation_buttons)
     return builder
