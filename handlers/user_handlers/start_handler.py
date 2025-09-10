@@ -90,7 +90,7 @@ def setup(router):
                         if id_ not in existing_ids:
                             is_id = True
                     await db.execute(
-                        "UPDATE users SET list_id = %s username = %s WHERE id = %s",
+                        "UPDATE users SET list_id = %s, username = %s WHERE id = %s",
                         (id_, message.from_user.username, message.from_user.id),
                     )
                     await db.execute(f"RENAME TABLE {username} TO {id_}")
