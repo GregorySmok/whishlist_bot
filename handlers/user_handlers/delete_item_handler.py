@@ -22,12 +22,14 @@ def setup(router):
                 "delete_item_started",
                 "User initiated deleting items",
             )
-
-            wishes = [
-                i
-                for i in await db.fetch_all(
-                    f"SELECT stuff_link, id FROM {message.from_user.username}"
+            list_id = (
+                await db.fetch_one(
+                    "SELECT list_id FROM users WHERE id = %s",
+                    (message.from_user.id,),
                 )
+            )[0]
+            wishes = [
+                i for i in await db.fetch_all(f"SELECT stuff_link, id FROM {list_id}")
             ]
 
             if not wishes:

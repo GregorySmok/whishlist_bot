@@ -10,12 +10,18 @@ from keyboards.reply import set_default_keyboard
 
 
 def setup(router):
-    @router.message(StateFilter(States.already_started), Command(commands=["мой_вишлист"]))
+    @router.message(
+        StateFilter(States.already_started), Command(commands=["мой_вишлист"])
+    )
     async def my_wishlist_handler(message: Message):
         try:
+            list_id = (
+                await db.fetch_one(
+                    "SELECT list_id FROM users WHERE id = %s", (message.from_user.id,)
+                )
+            )[0]
             wishlist = [
-                i
-                for i in await db.fetch_all(f"SELECT id, stuff_link FROM {message.from_user.username}")
+                i for i in await db.fetch_all(f"SELECT id, stuff_link FROM {list_id}")
             ]
 
             if not wishlist:
@@ -43,7 +49,9 @@ def setup(router):
         except Exception as e:
             error_traceback = traceback.format_exc()
             log_error(
-                message.from_user.id, f"Error in my_wishlist_handler: {e}", error_traceback
+                message.from_user.id,
+                f"Error in my_wishlist_handler: {e}",
+                error_traceback,
             )
             await shared.bot.send_message(
                 message.from_user.id,

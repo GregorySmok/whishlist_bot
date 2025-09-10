@@ -14,10 +14,20 @@ def setup(router):
         try:
             friend_id = int(callback_query.data.split("_")[1])
             friend_name = (
-                await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend_id,))
+                await db.fetch_one(
+                    "SELECT username FROM users WHERE id = %s", (friend_id,)
+                )
+            )[0]
+            list_id = (
+                await db.fetch_one(
+                    "SELECT list_id FROM users WHERE id = %s",
+                    (friend_id,),
+                )
             )[0]
 
-            wishes = [i for i in await db.fetch_all(f"SELECT id, stuff_link FROM {friend_name}")]
+            wishes = [
+                i for i in await db.fetch_all(f"SELECT id, stuff_link FROM {list_id}")
+            ]
 
             if not wishes:
                 await shared.bot.send_message(
@@ -33,12 +43,15 @@ def setup(router):
                 await callback_query.answer()
                 return
 
-            await shared.bot.send_message(callback_query.from_user.id, f"Вишлист @{friend_name}:")
+            await shared.bot.send_message(
+                callback_query.from_user.id, f"Вишлист @{friend_name}:"
+            )
             for id_, link in wishes:
-                builder = await want_to_present_button(
-                    callback_query, friend_name, id_)
+                builder = await want_to_present_button(callback_query, friend_name, id_)
 
-                await shared.bot.send_message(callback_query.from_user.id, link, reply_markup=builder.as_markup())
+                await shared.bot.send_message(
+                    callback_query.from_user.id, link, reply_markup=builder.as_markup()
+                )
 
             log_user_action(
                 callback_query.from_user.id,
@@ -59,5 +72,5 @@ def setup(router):
             await callback_query.answer("Произошла ошибка")
             await shared.bot.send_message(
                 callback_query.from_user.id,
-                "Произошла ошибка при загрузке вишлиста друга. Пожалуйста, попробуйте позже.",
+                "Произошла ошибка при загрузке вишлиста друга. Пожалуйста, попробуйте позже или попросите пользователя запустить бота командой /start.",
             )

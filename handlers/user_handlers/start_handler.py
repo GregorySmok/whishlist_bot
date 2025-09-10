@@ -9,12 +9,12 @@ from aiogram.fsm.context import FSMContext
 from log_setup import log_user_action, log_error
 import traceback
 from keyboards.reply import set_default_keyboard
+from random import choices
 
 
 def setup(router):
     @router.message(
-        StateFilter(default_state, States.already_started), Command(
-            commands=["start"])
+        StateFilter(default_state, States.already_started), Command(commands=["start"])
     )
     async def start_handler(message: Message, state: FSMContext):
         try:
@@ -35,12 +35,22 @@ def setup(router):
             users_list = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
 
             if message.from_user.id not in users_list:
+                is_id = False
+                existing_ids = await db.fetch_all("SELECT list_id FROM users")
+                existing_ids = (
+                    [id_[0] for id_ in existing_ids] if existing_ids else None
+                )
+
+                while not is_id:
+                    id_ = "".join(choices("0123456789qwertyuiopasdfghjklzxcvbnm", k=6))
+                    if id_ not in existing_ids:
+                        is_id = True
                 await db.execute(
-                    "INSERT INTO users (id, username) VALUES (%s, %s)",
-                    (message.from_user.id, message.from_user.username),
+                    "INSERT INTO users (id, username, list_id) VALUES (%s, %s, %s)",
+                    (message.from_user.id, message.from_user.username, id_),
                 )
                 await db.execute(
-                    f"CREATE TABLE {message.from_user.username} (id INT AUTO_INCREMENT PRIMARY KEY, stuff_link VARCHAR(2048))"
+                    f"CREATE TABLE {id_} (id INT AUTO_INCREMENT PRIMARY KEY, stuff_link VARCHAR(2048))"
                 )
 
                 await shared.bot.send_message(
@@ -54,6 +64,36 @@ def setup(router):
                     "New user registered",
                 )
             else:
+                list_id = (
+                    await db.fetch_one(
+                        "SELECT list_id FROM users WHERE id = %s",
+                        (message.from_user.id,),
+                    )
+                )[0]
+                if not list_id:
+                    username = (
+                        await db.fetch_one(
+                            "SELECT username FROM users WHERE id = %s",
+                            (message.from_user.id,),
+                        )
+                    )[0]
+                    is_id = False
+                    existing_ids = await db.fetch_all("SELECT list_id FROM users")
+                    existing_ids = (
+                        [id_[0] for id_ in existing_ids] if existing_ids else None
+                    )
+
+                    while not is_id:
+                        id_ = "".join(
+                            choices("0123456789qwertyuiopasdfghjklzxcvbnm", k=6)
+                        )
+                        if id_ not in existing_ids:
+                            is_id = True
+                    await db.execute(
+                        "UPDATE users SET list_id = %s username = %s WHERE id = %s",
+                        (id_, message.from_user.username, message.from_user.id),
+                    )
+                    await db.execute(f"RENAME TABLE {username} TO {id_}")
                 await shared.bot.send_message(
                     message.from_user.id,
                     f"Привет, {message.from_user.username}! Что хочешь сделать ?",
@@ -69,8 +109,9 @@ def setup(router):
 
         except Exception as e:
             error_traceback = traceback.format_exc()
-            log_error(message.from_user.id,
-                      f"Error in start_handler: {e}", error_traceback)
+            log_error(
+                message.from_user.id, f"Error in start_handler: {e}", error_traceback
+            )
             await shared.bot.send_message(
                 message.from_user.id,
                 "Произошла ошибка при запуске бота. Пожалуйста, попробуйте позже или обратитесь к администратору.",

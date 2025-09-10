@@ -17,20 +17,26 @@ def setup(router):
 
             # Получаем данные пользователя
             username = callback_query.from_user.username
-
+            list_id = (
+                await db.fetch_one(
+                    "SELECT list_id FROM users WHERE id = %s",
+                    (callback_query.from_user.id,),
+                )
+            )[0]
             wishes = [
-                i for i in await db.fetch_all(f"SELECT stuff_link, id FROM {username}")
+                i for i in await db.fetch_all(f"SELECT stuff_link, id FROM {list_id}")
             ]
 
             # Удаляем товар по индексу
             if item_index in [i[1] for i in wishes]:
-                deleted_item = list(
-                    filter(lambda x: x[1] == item_index, wishes))[0][0]
+                deleted_item = list(filter(lambda x: x[1] == item_index, wishes))[0][0]
                 await db.execute(
-                    f"DELETE FROM {username} WHERE stuff_link = %s", (
-                        deleted_item,)
+                    f"DELETE FROM {list_id} WHERE stuff_link = %s", (deleted_item,)
                 )
-                await db.execute("DELETE FROM want_to_present WHERE host_list = %s AND gift = %s", (username, item_index))
+                await db.execute(
+                    "DELETE FROM want_to_present WHERE host_list = %s AND gift = %s",
+                    (username, item_index),
+                )
 
                 await callback_query.answer("Товар удален")
                 await callback_query.message.delete()

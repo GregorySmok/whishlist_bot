@@ -15,7 +15,12 @@ def setup(router):
     async def adding_item(message: Message, state: FSMContext):
         try:
             item_link = message.text
-
+            list_id = (
+                await db.fetch_one(
+                    "SELECT list_id FROM users WHERE id = %s",
+                    (message.from_user.id,),
+                )
+            )[0]
             if item_link == "0":
                 await state.set_state(States.already_started)
                 await set_default_keyboard(message.from_user.id)
@@ -28,10 +33,7 @@ def setup(router):
                 return
 
             goods = [
-                i[0]
-                for i in await db.fetch_all(
-                    f"SELECT stuff_link FROM {message.from_user.username}"
-                )
+                i[0] for i in await db.fetch_all(f"SELECT stuff_link FROM {list_id}")
             ]
 
             if await check_link_liquidity(item_link):
@@ -49,7 +51,7 @@ def setup(router):
                     return
 
                 await db.execute(
-                    f"INSERT INTO {message.from_user.username} (stuff_link) VALUES (%s)",
+                    f"INSERT INTO {list_id} (stuff_link) VALUES (%s)",
                     (item_link,),
                 )
                 await shared.bot.send_message(
@@ -78,8 +80,9 @@ def setup(router):
 
         except Exception as e:
             error_traceback = traceback.format_exc()
-            log_error(message.from_user.id,
-                      f"Error in adding_item: {e}", error_traceback)
+            log_error(
+                message.from_user.id, f"Error in adding_item: {e}", error_traceback
+            )
             await shared.bot.send_message(
                 message.from_user.id,
                 "Произошла ошибка при добавлении товара. Пожалуйста, проверьте формат ссылки и попробуйте снова.",
