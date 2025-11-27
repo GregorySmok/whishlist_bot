@@ -1,17 +1,20 @@
+from aiogram import F
+from emoji import emojize
 from states import States
 from aiogram.types import Message
 from aiogram.filters.state import StateFilter
-from aiogram.filters import Command
 from database import db
 from shared import shared
 from log_setup import log_user_action, log_error
 import traceback
 from keyboards.reply import set_default_keyboard
+from aiogram import types
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 def setup(router):
     @router.message(
-        StateFilter(States.already_started), Command(commands=["мой_вишлист"])
+        StateFilter(States.already_started), F.text == emojize(":memo: Мой вишлист")
     )
     async def my_wishlist_handler(message: Message):
         try:
@@ -36,8 +39,24 @@ def setup(router):
                 return
 
             await shared.bot.send_message(message.from_user.id, "Ваш вишлист:")
-            for _, link in wishlist:
-                await shared.bot.send_message(message.from_user.id, link)
+            for id_, link in wishlist:
+                booked = await db.fetch_one(
+                    "SELECT gifter FROM want_to_present WHERE gift = %s AND host_list = %s",
+                    (id_, list_id),
+                )
+
+                builder = InlineKeyboardBuilder()
+                if booked:
+                    builder.add(
+                        types.InlineKeyboardButton(
+                            text="Забронировано", callback_data="none"
+                        )
+                    )
+                    await shared.bot.send_message(
+                        message.from_user.id, link, reply_markup=builder.as_markup()
+                    )
+                else:
+                    await shared.bot.send_message(message.from_user.id, link)
 
             log_user_action(
                 message.from_user.id,

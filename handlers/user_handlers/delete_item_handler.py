@@ -1,7 +1,8 @@
+from aiogram import F
+from emoji import emojize
 from states import States
 from aiogram.types import Message
 from aiogram.filters.state import StateFilter
-from aiogram.filters import Command
 from database import db
 from shared import shared
 from aiogram.fsm.context import FSMContext
@@ -12,7 +13,10 @@ from keyboards.inline import delete_item_button, stop_deleting_button
 
 
 def setup(router):
-    @router.message(StateFilter(States.already_started), Command(commands=["удалить"]))
+
+    @router.message(
+        StateFilter(States.already_started), F.text == emojize(":wastebasket: Удалить")
+    )
     async def deleting_item_handler(message: Message, state: FSMContext):
         try:
             await state.set_state(States.deleting_item)

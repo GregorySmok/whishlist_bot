@@ -13,20 +13,20 @@ def setup(router):
     async def process_friend_selection(callback_query: CallbackQuery):
         try:
             friend_id = int(callback_query.data.split("_")[1])
-            friend_name = (
-                await db.fetch_one(
-                    "SELECT username FROM users WHERE id = %s", (friend_id,)
-                )
-            )[0]
-            list_id = (
+            friend_name, friend_list = await db.fetch_one(
+                "SELECT username, list_id FROM users WHERE id = %s",
+                (friend_id,),
+            )
+            my_list = (
                 await db.fetch_one(
                     "SELECT list_id FROM users WHERE id = %s",
-                    (friend_id,),
+                    (callback_query.from_user.id,),
                 )
             )[0]
 
             wishes = [
-                i for i in await db.fetch_all(f"SELECT id, stuff_link FROM {list_id}")
+                i
+                for i in await db.fetch_all(f"SELECT id, stuff_link FROM {friend_list}")
             ]
 
             if not wishes:
@@ -47,7 +47,7 @@ def setup(router):
                 callback_query.from_user.id, f"Вишлист @{friend_name}:"
             )
             for id_, link in wishes:
-                builder = await want_to_present_button(callback_query, friend_name, id_)
+                builder = await want_to_present_button(my_list, friend_list, id_)
 
                 await shared.bot.send_message(
                     callback_query.from_user.id, link, reply_markup=builder.as_markup()
