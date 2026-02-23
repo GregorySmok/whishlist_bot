@@ -1,15 +1,17 @@
-from aiogram import F
-from emoji import emojize
-from states import States
-from aiogram.types import Message
-from aiogram.filters.state import StateFilter
-from database import db
-from shared import shared
-from aiogram.fsm.context import FSMContext
-from log_setup import log_user_action, log_error
 import traceback
-from keyboards.reply import set_default_keyboard
+
+from aiogram import F
+from aiogram.filters.state import StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
+from emoji import emojize
+
+from database import db
 from keyboards.inline import delete_item_button, stop_deleting_button
+from keyboards.reply import set_default_keyboard
+from log_setup import log_error, log_user_action
+from shared import shared
+from states import States
 
 
 def setup(router):

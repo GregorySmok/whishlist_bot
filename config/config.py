@@ -1,6 +1,7 @@
 import os
-from dotenv import load_dotenv
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -15,7 +16,7 @@ MYSQLPASSWORD = str(os.getenv("PASSWORD"))
 MYSQLDB = str(os.getenv("DB"))
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR = BASE_DIR / "logs"
 ITEMS_PER_PAGE = 3
 
 admins = [2040304896]

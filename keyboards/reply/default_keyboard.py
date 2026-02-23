@@ -1,9 +1,11 @@
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from aiogram import types
-from shared import shared
-from log_setup import log_error
 import traceback
+
+from aiogram import types
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from emoji import emojize
+
+from log_setup import log_error
+from shared import shared
 
 
 async def set_default_keyboard(chat_id):

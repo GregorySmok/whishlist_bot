@@ -1,9 +1,11 @@
-from aiogram.types import Message
-from database import db
-from log_setup import log_user_action, log_error
 import traceback
+
+from aiogram.types import Message
+
 from config.config import ITEMS_PER_PAGE
+from database import db
 from keyboards.inline import friends_list_kb
+from log_setup import log_error, log_user_action
 
 
 async def show_friends_page(message: Message, user_id: int, page: int):
@@ -33,8 +35,7 @@ async def show_friends_page(message: Message, user_id: int, page: int):
                     user_id,
                     (
                         await db.fetch_one(
-                            "SELECT username FROM users WHERE id = %s", (
-                                user_id,)
+                            "SELECT username FROM users WHERE id = %s", (user_id,)
                         )
                     )[0],
                     "view_empty_friends_list",

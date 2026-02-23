@@ -1,9 +1,11 @@
-from aiogram.types import CallbackQuery
-from shared import shared
-from log_setup import log_error
 import traceback
+
 from aiogram import F
+from aiogram.types import CallbackQuery
+
 from keyboards.inline import update_present_button
+from log_setup import log_error
+from shared import shared
 
 
 def setup(router):

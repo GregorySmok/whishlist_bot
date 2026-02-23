@@ -1,5 +1,6 @@
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 from database import db
 
 
@@ -21,7 +22,7 @@ async def want_to_present_button(my_list, friend_list, id_):
         elif someone_want != my_list:
             builder.add(
                 types.InlineKeyboardButton(
-                    text=f"Это уже кто-то дарит", callback_data="none"
+                    text="Это уже кто-то дарит", callback_data="none"
                 )
             )
     else:

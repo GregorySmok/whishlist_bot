@@ -1,12 +1,14 @@
-from states import States
-from aiogram import F
-from aiogram.types import CallbackQuery
-from aiogram.filters.state import StateFilter
-from shared import shared
-from aiogram.fsm.context import FSMContext
-from log_setup import log_user_action, log_error
 import traceback
+
+from aiogram import F
+from aiogram.filters.state import StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery
+
 from keyboards.reply import set_default_keyboard
+from log_setup import log_error, log_user_action
+from shared import shared
+from states import States
 
 
 def setup(router):
@@ -29,7 +31,9 @@ def setup(router):
         except Exception as e:
             error_traceback = traceback.format_exc()
             log_error(
-                callback_query.from_user.id, f"Error in stop_deleting: {e}", error_traceback
+                callback_query.from_user.id,
+                f"Error in stop_deleting: {e}",
+                error_traceback,
             )
             await shared.bot.send_message(
                 callback_query.from_user.id,

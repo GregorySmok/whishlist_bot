@@ -1,11 +1,13 @@
-from states import States
-from aiogram import F
-from aiogram.types import CallbackQuery
-from aiogram.filters.state import StateFilter
-from database import db
-from shared import shared
-from log_setup import log_user_action, log_error
 import traceback
+
+from aiogram import F
+from aiogram.filters.state import StateFilter
+from aiogram.types import CallbackQuery
+
+from database import db
+from log_setup import log_error, log_user_action
+from shared import shared
+from states import States
 
 
 def setup(router):

@@ -1,12 +1,14 @@
-from aiogram import F
-from emoji import emojize
-from states import States
-from aiogram.types import Message
-from aiogram.filters.state import StateFilter
-from shared import shared
-from log_setup import log_user_action, log_error
 import traceback
+
+from aiogram import F
+from aiogram.filters.state import StateFilter
+from aiogram.types import Message
+from emoji import emojize
+
 from keyboards.reply import set_default_keyboard
+from log_setup import log_error, log_user_action
+from shared import shared
+from states import States
 from utils import show_friends_page
 
 

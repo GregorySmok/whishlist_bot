@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  # Твой бот
+  bot:
+    build: .
+    restart: always
+    depends_on:
+      - db # Бот подождет, пока запустится база
+    env_file:
+      - config/.env
+
+  # База данных MySQL
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password # Задай сложный пароль
+      MYSQL_DATABASE: my_bot_db # Имя твоей базы
+    volumes:
+      - db_data:/var/lib/mysql # Чтобы данные не пропали при перезагрузке
+
+volumes:
+  db_data:

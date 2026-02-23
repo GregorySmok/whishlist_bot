@@ -1,5 +1,6 @@
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 from database import db
 
 
@@ -20,7 +21,7 @@ async def update_present_button(callback_query, action, friend_list, gift_id):
         if someone_want != my_list:
             new_markup.add(
                 types.InlineKeyboardButton(
-                    text=f"Это уже кто-то дарит", callback_data="none"
+                    text="Это уже кто-то дарит", callback_data="none"
                 )
             )
             skip = True

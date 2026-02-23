@@ -1,13 +1,13 @@
-import os
-from pathlib import Path
-import config.config as config
-from datetime import datetime, timedelta
 import logging
+import os
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import config.config as config
 
 # Настройка логирования
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 MAX_LOG_AGE_DAYS = 2
@@ -19,20 +19,22 @@ def clean_logs():
     Игнорирует текущие лог-файлы (без даты в имени).
     """
     cutoff_date = datetime.now() - timedelta(days=MAX_LOG_AGE_DAYS)
-    logging.info(f"Начало очистки логов. Удаляем файлы старше {cutoff_date.strftime('%Y-%m-%d')}")
-    
+    logging.info(
+        f"Начало очистки логов. Удаляем файлы старше {cutoff_date.strftime('%Y-%m-%d')}"
+    )
+
     removed_count = 0
     error_count = 0
-    
-    for file in Path(config.LOG_DIR).glob('*.log'):
+
+    for file in Path(config.LOG_DIR).glob("*.log"):
         # Не трогаем текущие файлы
-        if '_' not in file.name:
+        if "_" not in file.name:
             logging.debug(f"Пропускаем текущий лог-файл: {file}")
             continue
 
         try:
             # Извлекаем дату из имени файла
-            date_str = file.name.split('_')[-1].split('.')[0]
+            date_str = file.name.split("_")[-1].split(".")[0]
             file_date = datetime.strptime(date_str, "%Y-%m-%d")
 
             if file_date < cutoff_date:
@@ -42,8 +44,10 @@ def clean_logs():
         except Exception as e:
             logging.error(f"Ошибка при обработке {file}: {e}")
             error_count += 1
-    
-    logging.info(f"Очистка завершена. Удалено файлов: {removed_count}, ошибок: {error_count}")
+
+    logging.info(
+        f"Очистка завершена. Удалено файлов: {removed_count}, ошибок: {error_count}"
+    )
 
 
 if __name__ == "__main__":

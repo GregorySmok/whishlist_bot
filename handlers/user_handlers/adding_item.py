@@ -1,12 +1,14 @@
-from states import States
-from aiogram.types import Message
-from aiogram.filters.state import StateFilter
-from database import db
-from shared import shared
-from aiogram.fsm.context import FSMContext
-from log_setup import log_user_action, log_error
 import traceback
+
+from aiogram.filters.state import StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
+
+from database import db
 from keyboards.reply import set_default_keyboard
+from log_setup import log_error, log_user_action
+from shared import shared
+from states import States
 from utils import check_link_liquidity
 
 
@@ -55,7 +57,7 @@ def setup(router):
                     (item_link,),
                 )
                 await shared.bot.send_message(
-                    message.from_user.id, f"Товар добавлен в ваш список."
+                    message.from_user.id, "Товар добавлен в ваш список."
                 )
                 log_user_action(
                     message.from_user.id,

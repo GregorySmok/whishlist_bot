@@ -1,9 +1,11 @@
-from aiogram.types import CallbackQuery
-from shared import shared
-from log_setup import log_user_action, log_error
 import traceback
-from utils import show_friends_page
+
 from aiogram import F
+from aiogram.types import CallbackQuery
+
+from log_setup import log_error, log_user_action
+from shared import shared
+from utils import show_friends_page
 
 
 def setup(router):

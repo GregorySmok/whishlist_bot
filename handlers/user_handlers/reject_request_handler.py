@@ -1,11 +1,13 @@
-from states import States
-from aiogram.types import CallbackQuery
-from aiogram.filters.state import StateFilter
-from database import db
-from shared import shared
-from log_setup import log_user_action, log_error
 import traceback
+
 from aiogram import F
+from aiogram.filters.state import StateFilter
+from aiogram.types import CallbackQuery
+
+from database import db
+from log_setup import log_error, log_user_action
+from shared import shared
+from states import States
 
 
 def setup(router):
@@ -17,7 +19,9 @@ def setup(router):
             friend_id = callback_query.data.split("^")[1]
             user_id = callback_query.from_user.id
             friend_name = (
-                await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend_id,))
+                await db.fetch_one(
+                    "SELECT username FROM users WHERE id = %s", (friend_id,)
+                )
             )[0]
 
             await callback_query.answer()
@@ -45,7 +49,9 @@ def setup(router):
         except Exception as e:
             error_traceback = traceback.format_exc()
             log_error(
-                callback_query.from_user.id, f"Error in reject_friend: {e}", error_traceback
+                callback_query.from_user.id,
+                f"Error in reject_friend: {e}",
+                error_traceback,
             )
             await shared.bot.send__message(
                 callback_query.from_user.id,

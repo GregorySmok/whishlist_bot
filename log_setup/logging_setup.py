@@ -1,5 +1,6 @@
 import logging
 import time
+
 import config.config as config
 
 
@@ -18,14 +19,14 @@ class AtomicFileHandler(logging.Handler):
             new_file = self.log_dir / f"{self.base_name}_{today}.log"
             if self.current_file:
                 self.current_file.close()
-            self.current_file = open(new_file, 'a', encoding='utf-8')
+            self.current_file = open(new_file, "a", encoding="utf-8")
         return self.current_file
 
     def emit(self, record):
         try:
             file = self.get_file()
             msg = self.format(record)
-            file.write(msg + '\n')
+            file.write(msg + "\n")
             file.flush()
         except Exception as e:
             print(f"Error writing log: {e}")
@@ -33,35 +34,45 @@ class AtomicFileHandler(logging.Handler):
 
 def setup_logging():
     # Основной логгер
-    main_logger = logging.getLogger('main')
+    main_logger = logging.getLogger("main")
     main_logger.setLevel(logging.INFO)
-    main_handler = AtomicFileHandler(config.LOG_DIR, 'main')
-    main_handler.setFormatter(logging.Formatter(
-        "%(asctime)s - %(levelname)s - %(message)s"))
+    main_handler = AtomicFileHandler(config.LOG_DIR, "main")
+    main_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    )
     main_logger.addHandler(main_handler)
 
     # Логгер действий пользователя
-    user_logger = logging.getLogger('user_actions')
+    user_logger = logging.getLogger("user_actions")
     user_logger.setLevel(logging.INFO)
-    user_handler = AtomicFileHandler(config.LOG_DIR, 'user_actions')
-    user_handler.setFormatter(logging.Formatter(
-        "%(asctime)s - USER:%(user_id)s/%(username)s - ACTION:%(action)s - %(details)s"))
+    user_handler = AtomicFileHandler(config.LOG_DIR, "user_actions")
+    user_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s - USER:%(user_id)s/%(username)s - ACTION:%(action)s - %(details)s"
+        )
+    )
     user_logger.addHandler(user_handler)
 
     # Логгер ошибок
-    error_logger = logging.getLogger('errors')
+    error_logger = logging.getLogger("errors")
     error_logger.setLevel(logging.ERROR)
-    error_handler = AtomicFileHandler(config.LOG_DIR, 'errors')
-    error_handler.setFormatter(logging.Formatter(
-        "%(asctime)s - ERROR:%(error)s - USER:%(user_id)s - TRACEBACK:%(traceback)s"))
+    error_handler = AtomicFileHandler(config.LOG_DIR, "errors")
+    error_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s - ERROR:%(error)s - USER:%(user_id)s - TRACEBACK:%(traceback)s"
+        )
+    )
     error_logger.addHandler(error_handler)
-    
+
     # Логгер действий администратора
-    admin_logger = logging.getLogger('admin_actions')
+    admin_logger = logging.getLogger("admin_actions")
     admin_logger.setLevel(logging.INFO)
-    admin_handler = AtomicFileHandler(config.LOG_DIR, 'admin_actions')
-    admin_handler.setFormatter(logging.Formatter(
-        "%(asctime)s - ADMIN:%(admin_id)s/%(admin_username)s - ACTION:%(action)s - TARGET:%(target)s - %(details)s"))
+    admin_handler = AtomicFileHandler(config.LOG_DIR, "admin_actions")
+    admin_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s - ADMIN:%(admin_id)s/%(admin_username)s - ACTION:%(action)s - TARGET:%(target)s - %(details)s"
+        )
+    )
     admin_logger.addHandler(admin_handler)
 
     return main_logger, user_logger, error_logger, admin_logger
@@ -72,27 +83,32 @@ main_logger, user_logger, error_logger, admin_logger = setup_logging()
 
 
 def log_user_action(user_id, username, action, details=""):
-    user_logger.info("", extra={
-        'user_id': user_id,
-        'username': username,
-        'action': action,
-        'details': details
-    })
+    user_logger.info(
+        "",
+        extra={
+            "user_id": user_id,
+            "username": username,
+            "action": action,
+            "details": details,
+        },
+    )
 
 
 def log_error(user_id, error, error_traceback=""):
-    error_logger.error("", extra={
-        'user_id': user_id,
-        'error': str(error),
-        'traceback': error_traceback
-    })
+    error_logger.error(
+        "",
+        extra={"user_id": user_id, "error": str(error), "traceback": error_traceback},
+    )
 
 
 def log_admin_action(admin_id, admin_username, action, target="", details=""):
-    admin_logger.info("", extra={
-        'admin_id': admin_id,
-        'admin_username': admin_username,
-        'action': action,
-        'target': target,
-        'details': details
-    })
+    admin_logger.info(
+        "",
+        extra={
+            "admin_id": admin_id,
+            "admin_username": admin_username,
+            "action": action,
+            "target": target,
+            "details": details,
+        },
+    )

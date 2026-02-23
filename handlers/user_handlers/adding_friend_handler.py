@@ -1,15 +1,17 @@
-from states import States
-from aiogram.types import Message
-from aiogram.filters.state import StateFilter
-from database import db
-from shared import shared
-from aiogram.fsm.context import FSMContext
-from log_setup import log_user_action, log_error, main_logger
 import traceback
-from keyboards.reply import set_default_keyboard
-from aiogram import F
 from datetime import datetime
+
+from aiogram import F
+from aiogram.filters.state import StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
+
+from database import db
 from keyboards.inline import accept_request_kb
+from keyboards.reply import set_default_keyboard
+from log_setup import log_error, log_user_action, main_logger
+from shared import shared
+from states import States
 
 
 def setup(router):
@@ -21,7 +23,7 @@ def setup(router):
 
             if friend_id not in users_list:
                 await shared.bot.send_message(
-                    message.chat.id, f"Пользователь не зарегистрирован в данном боте."
+                    message.chat.id, "Пользователь не зарегистрирован в данном боте."
                 )
                 log_user_action(
                     message.from_user.id,
@@ -69,7 +71,8 @@ def setup(router):
                 if old_request[0] in ("waiting", "rejected"):
                     old_time = old_request[1]
                     time_since_request = (
-                        datetime.now() - old_time).total_seconds() // 60
+                        datetime.now() - old_time
+                    ).total_seconds() // 60
 
                     if time_since_request < 5:
                         await shared.bot.send_message(
@@ -116,15 +119,17 @@ def setup(router):
             log_user_action(
                 message.from_user.id,
                 message.from_user.username,
-                "send_request" f"sent friend request to: @{username}",
+                f"send_requestsent friend request to: @{username}",
             )
 
         except Exception as e:
             error_traceback = traceback.format_exc()
-            log_error(message.from_user.id,
-                      f"Error in adding_friend: {e}", error_traceback)
+            log_error(
+                message.from_user.id, f"Error in adding_friend: {e}", error_traceback
+            )
             await shared.bot.send_message(
-                message.chat.id, "Произошла ошибка при добавлении друга. Попробуйте позже."
+                message.chat.id,
+                "Произошла ошибка при добавлении друга. Попробуйте позже.",
             )
 
             await state.set_state(States.already_started)

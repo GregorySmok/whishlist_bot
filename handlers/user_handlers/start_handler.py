@@ -1,15 +1,17 @@
-from states import States
-from aiogram.types import Message
-from aiogram.filters.state import StateFilter
-from aiogram.filters import Command
-from database import db
-from shared import shared
-from aiogram.fsm.state import default_state
-from aiogram.fsm.context import FSMContext
-from log_setup import log_user_action, log_error
 import traceback
-from keyboards.reply import set_default_keyboard
 from random import choices
+
+from aiogram.filters import Command
+from aiogram.filters.state import StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import default_state
+from aiogram.types import Message
+
+from database import db
+from keyboards.reply import set_default_keyboard
+from log_setup import log_error, log_user_action
+from shared import shared
+from states import States
 
 
 def setup(router):

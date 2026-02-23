@@ -1,11 +1,14 @@
 from aiogram import Router
-from . import admin_handler
-from . import ban_handler
-from . import banlist_handler
-from . import close_handler
-from . import notification_handler
-from . import unban_handler
-from . import users_handler
+
+from . import (
+    admin_handler,
+    ban_handler,
+    banlist_handler,
+    close_handler,
+    notification_handler,
+    unban_handler,
+    users_handler,
+)
 
 admin_router = Router()
 admin_handler.setup(admin_router)

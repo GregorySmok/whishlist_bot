@@ -1,20 +1,23 @@
-from . import delete_item_handler
-from . import deleting_item
-from . import start_handler
-from . import add_item_handler
-from . import adding_item
-from . import stop_deleting_item
-from . import my_wishlist_handler
-from . import friend_handler
-from . import friend_selection_handler
-from . import want_to_gift_handler
-from . import none_handler
-from . import page_selection_handler
-from . import adding_friend_handler
-from . import accept_request_handler
-from . import reject_request_handler
-from . import refresh_handler
 from aiogram import Router
+
+from . import (
+    accept_request_handler,
+    add_item_handler,
+    adding_friend_handler,
+    adding_item,
+    delete_item_handler,
+    deleting_item,
+    friend_handler,
+    friend_selection_handler,
+    my_wishlist_handler,
+    none_handler,
+    page_selection_handler,
+    refresh_handler,
+    reject_request_handler,
+    start_handler,
+    stop_deleting_item,
+    want_to_gift_handler,
+)
 
 user_router = Router()
 start_handler.setup(user_router)

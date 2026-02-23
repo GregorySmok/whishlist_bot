@@ -1,7 +1,9 @@
-from typing import Callable, Dict, Any, Awaitable
+from typing import Any, Awaitable, Callable, Dict
+
 from aiogram import BaseMiddleware
-from aiogram.types import Message
 from aiogram.dispatcher.event.bases import CancelHandler
+from aiogram.types import Message
+
 from database import db
 
 

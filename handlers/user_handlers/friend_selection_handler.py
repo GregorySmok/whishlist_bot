@@ -1,11 +1,13 @@
-from database import db
-from shared import shared
-from log_setup import log_user_action, log_error
 import traceback
-from keyboards.reply import set_default_keyboard
+
 from aiogram import F
 from aiogram.types import CallbackQuery
+
+from database import db
 from keyboards.inline import want_to_present_button
+from keyboards.reply import set_default_keyboard
+from log_setup import log_error, log_user_action
+from shared import shared
 
 
 def setup(router):

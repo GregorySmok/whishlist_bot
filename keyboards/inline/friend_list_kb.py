@@ -1,8 +1,9 @@
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from database import db
-from config.config import ITEMS_PER_PAGE
 from emoji import emojize
+
+from config.config import ITEMS_PER_PAGE
+from database import db
 
 
 async def friends_list_kb(friends, total_friends, page):
@@ -11,9 +12,7 @@ async def friends_list_kb(friends, total_friends, page):
     # Добавляем кнопки друзей
     for friend in friends:
         friend_name = (
-            await db.fetch_one(
-                "SELECT username FROM users WHERE id = %s", (friend,)
-            )
+            await db.fetch_one("SELECT username FROM users WHERE id = %s", (friend,))
         )[0]
         builder.add(
             types.InlineKeyboardButton(
@@ -28,8 +27,7 @@ async def friends_list_kb(friends, total_friends, page):
     if page > 0:
         navigation_buttons.append(
             types.InlineKeyboardButton(
-                text=emojize(":left_arrow:"),
-                callback_data=f"page_{page - 1}"
+                text=emojize(":left_arrow:"), callback_data=f"page_{page - 1}"
             )
         )
 
@@ -37,8 +35,7 @@ async def friends_list_kb(friends, total_friends, page):
     if (page + 1) * ITEMS_PER_PAGE < total_friends:
         navigation_buttons.append(
             types.InlineKeyboardButton(
-                text=emojize(":right_arrow:"),
-                callback_data=f"page_{page + 1}"
+                text=emojize(":right_arrow:"), callback_data=f"page_{page + 1}"
             )
         )
 
