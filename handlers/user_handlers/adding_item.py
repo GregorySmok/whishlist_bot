@@ -17,12 +17,6 @@ def setup(router):
     async def adding_item(message: Message, state: FSMContext):
         try:
             item_link = message.text
-            list_id = (
-                await db.fetch_one(
-                    "SELECT list_id FROM users WHERE id = %s",
-                    (message.from_user.id,),
-                )
-            )[0]
             if item_link == "0":
                 await state.set_state(States.already_started)
                 await set_default_keyboard(message.from_user.id)
@@ -34,12 +28,14 @@ def setup(router):
                 )
                 return
 
-            goods = [
-                i[0] for i in await db.fetch_all(f"SELECT stuff_link FROM {list_id}")
-            ]
-
             if await check_link_liquidity(item_link):
-                if item_link in goods:
+                # Проверка на дубликат у этого пользователя
+                exists = await db.fetch_one(
+                    "SELECT id FROM wishlist_items WHERE user_id = %s AND stuff_link = %s",
+                    (message.from_user.id, item_link),
+                )
+
+                if exists:
                     await shared.bot.send_message(
                         message.from_user.id,
                         "Ошибка: ссылка уже есть в вашем списке. Попробуйте другую",
@@ -53,8 +49,8 @@ def setup(router):
                     return
 
                 await db.execute(
-                    f"INSERT INTO {list_id} (stuff_link) VALUES (%s)",
-                    (item_link,),
+                    "INSERT INTO wishlist_items (user_id, stuff_link) VALUES (%s, %s)",
+                    (message.from_user.id, item_link),
                 )
                 await shared.bot.send_message(
                     message.from_user.id, "Товар добавлен в ваш список."
@@ -71,7 +67,7 @@ def setup(router):
             else:
                 await shared.bot.send_message(
                     message.from_user.id,
-                    "Ошибка: ссылка не найдена или недоступна. Пожалуйста, убедитесь, что ссылка начинается с 'https://' и попробуйте снова.",
+                    "Ошибка: ссылка не найдена или недоступна. Пожалуйста, убедитесь, что ссылка начинается с 'https://'.",
                 )
                 log_user_action(
                     message.from_user.id,
@@ -86,8 +82,7 @@ def setup(router):
                 message.from_user.id, f"Error in adding_item: {e}", error_traceback
             )
             await shared.bot.send_message(
-                message.from_user.id,
-                "Произошла ошибка при добавлении товара. Пожалуйста, проверьте формат ссылки и попробуйте снова.",
+                message.from_user.id, "Произошла ошибка при добавлении товара."
             )
             await state.set_state(States.already_started)
             await set_default_keyboard(message.from_user.id)

@@ -13,23 +13,20 @@ from shared import shared
 def setup(router):
     @router.callback_query(F.data.startswith("friend_"))
     async def process_friend_selection(callback_query: CallbackQuery):
+        await callback_query.answer()
         try:
             friend_id = int(callback_query.data.split("_")[1])
-            friend_name, friend_list = await db.fetch_one(
-                "SELECT username, list_id FROM users WHERE id = %s",
-                (friend_id,),
-            )
-            my_list = (
+            friend_name = (
                 await db.fetch_one(
-                    "SELECT list_id FROM users WHERE id = %s",
-                    (callback_query.from_user.id,),
+                    "SELECT username FROM users WHERE id = %s", (friend_id,)
                 )
             )[0]
+            my_id = callback_query.from_user.id
 
-            wishes = [
-                i
-                for i in await db.fetch_all(f"SELECT id, stuff_link FROM {friend_list}")
-            ]
+            wishes = await db.fetch_all(
+                "SELECT id, stuff_link FROM wishlist_items WHERE user_id = %s",
+                (friend_id,),
+            )
 
             if not wishes:
                 await shared.bot.send_message(
@@ -42,15 +39,14 @@ def setup(router):
                     "view_friend_empty_wishlist",
                     f"User viewed empty wishlist of friend @{friend_name}",
                 )
-                await callback_query.answer()
                 return
 
             await shared.bot.send_message(
                 callback_query.from_user.id, f"Вишлист @{friend_name}:"
             )
-            for id_, link in wishes:
-                builder = await want_to_present_button(my_list, friend_list, id_)
-
+            for item_id, link in wishes:
+                # Передаем напрямую ID пользователей, а не названия таблиц
+                builder = await want_to_present_button(my_id, friend_id, item_id)
                 await shared.bot.send_message(
                     callback_query.from_user.id, link, reply_markup=builder.as_markup()
                 )
@@ -61,8 +57,6 @@ def setup(router):
                 "view_friend_wishlist",
                 f"User viewed wishlist of friend @{friend_name} with {len(wishes)} items",
             )
-            # Подтверждаем обработку callback
-            await callback_query.answer()
 
         except Exception as e:
             error_traceback = traceback.format_exc()
@@ -71,8 +65,7 @@ def setup(router):
                 f"Error in process_friend_selection: {e}",
                 error_traceback,
             )
-            await callback_query.answer("Произошла ошибка")
             await shared.bot.send_message(
                 callback_query.from_user.id,
-                "Произошла ошибка при загрузке вишлиста друга. Пожалуйста, попробуйте позже или попросите пользователя запустить бота командой /start.",
+                "Произошла ошибка при загрузке вишлиста друга.",
             )

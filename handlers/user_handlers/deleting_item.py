@@ -13,49 +13,37 @@ from states import States
 def setup(router):
     @router.callback_query(F.data.startswith("del_"), StateFilter(States.deleting_item))
     async def delete_item(callback_query: CallbackQuery):
-        callback_query.answer()
+        await callback_query.answer()  # Гасим часики загрузки!
         try:
-            # Получаем индекс товара из callback_data
-            item_index = int(callback_query.data.replace("del_", ""))
-
-            # Получаем данные пользователя
+            item_id = int(callback_query.data.replace("del_", ""))
             username = callback_query.from_user.username
-            list_id = (
-                await db.fetch_one(
-                    "SELECT list_id FROM users WHERE id = %s",
-                    (callback_query.from_user.id,),
-                )
-            )[0]
-            wishes = [
-                i for i in await db.fetch_all(f"SELECT stuff_link, id FROM {list_id}")
-            ]
+            user_id = callback_query.from_user.id
 
-            # Удаляем товар по индексу
-            if item_index in [i[1] for i in wishes]:
-                deleted_item = list(filter(lambda x: x[1] == item_index, wishes))[0][0]
+            item_exists = await db.fetch_one(
+                "SELECT stuff_link FROM wishlist_items WHERE id = %s AND user_id = %s",
+                (item_id, user_id),
+            )
+
+            if item_exists:
+                deleted_link = item_exists[0]
+                await db.execute("DELETE FROM wishlist_items WHERE id = %s", (item_id,))
                 await db.execute(
-                    f"DELETE FROM {list_id} WHERE stuff_link = %s", (deleted_item,)
-                )
-                await db.execute(
-                    "DELETE FROM want_to_present WHERE host_list = %s AND gift = %s",
-                    (username, item_index),
+                    "DELETE FROM want_to_present WHERE gift = %s", (item_id,)
                 )
 
-                await callback_query.answer("Товар удален")
                 await callback_query.message.delete()
                 log_user_action(
-                    callback_query.from_user.id,
+                    user_id,
                     username,
                     "delete_item_success",
-                    f"Deleted item: {deleted_item}",
+                    f"Deleted item: {deleted_link}",
                 )
             else:
-                await callback_query.answer("Товар не найден")
                 log_user_action(
-                    callback_query.from_user.id,
+                    user_id,
                     username,
                     "delete_item_not_found",
-                    f"Item index out of range: {item_index}",
+                    f"Item ID not found: {item_id}",
                 )
 
         except Exception as e:
@@ -65,7 +53,6 @@ def setup(router):
                 f"Error while deleting item: {e}",
                 error_traceback,
             )
-            await callback_query.answer("Произошла ошибка при удалении")
             await shared.bot.send_message(
                 callback_query.from_user.id,
                 "Не удалось удалить товар. Пожалуйста, попробуйте позже.",

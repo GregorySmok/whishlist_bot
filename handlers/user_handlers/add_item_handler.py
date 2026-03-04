@@ -4,7 +4,6 @@ from aiogram import F
 from aiogram.filters.state import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from emoji import emojize
 
 from keyboards.reply import set_default_keyboard
 from log_setup import log_error, log_user_action
@@ -13,10 +12,7 @@ from states import States
 
 
 def setup(router):
-    @router.message(
-        StateFilter(States.already_started),
-        F.text == emojize(":wrapped_gift: Добавить"),
-    )
+    @router.message(StateFilter(States.already_started), F.text == "Добавить")
     async def add_item_handler(message: Message, state: FSMContext):
         try:
             await state.set_state(States.adding_item)

@@ -5,16 +5,15 @@ from aiogram.types import CallbackQuery
 
 from keyboards.inline import update_present_button
 from log_setup import log_error
-from shared import shared
 
 
 def setup(router):
     @router.callback_query(F.data.startswith("want^"))
     async def want_to_gift(callback_query: CallbackQuery):
         try:
-            friend_list, gift_id, action = callback_query.data.split("^")[1::]
+            _, friend_id, gift_id, action = callback_query.data.split("^")
             new_markup = await update_present_button(
-                callback_query, action, friend_list, gift_id
+                callback_query, action, int(friend_id), int(gift_id)
             )
             await callback_query.message.edit_reply_markup(
                 reply_markup=new_markup.as_markup()
@@ -28,7 +27,3 @@ def setup(router):
                 error_traceback,
             )
             await callback_query.answer("Произошла ошибка")
-            await shared.bot.send_message(
-                callback_query.from_user.id,
-                "Произошла ошибка при изменении статуса дарения. Пожалуйста, попробуйте позже.",
-            )

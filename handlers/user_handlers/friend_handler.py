@@ -3,7 +3,6 @@ import traceback
 from aiogram import F
 from aiogram.filters.state import StateFilter
 from aiogram.types import Message
-from emoji import emojize
 
 from keyboards.reply import set_default_keyboard
 from log_setup import log_error, log_user_action
@@ -14,10 +13,7 @@ from utils import show_friends_page
 
 def setup(router):
 
-    @router.message(
-        StateFilter(States.already_started),
-        F.text == emojize(":busts_in_silhouette: Друзья"),
-    )
+    @router.message(StateFilter(States.already_started), F.text == "Друзья")
     async def cmd_friends(message: Message):
         try:
             # Отправляем первую страницу

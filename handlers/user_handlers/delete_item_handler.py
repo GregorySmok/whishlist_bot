@@ -4,7 +4,6 @@ from aiogram import F
 from aiogram.filters.state import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from emoji import emojize
 
 from database import db
 from keyboards.inline import delete_item_button, stop_deleting_button
@@ -15,10 +14,7 @@ from states import States
 
 
 def setup(router):
-
-    @router.message(
-        StateFilter(States.already_started), F.text == emojize(":wastebasket: Удалить")
-    )
+    @router.message(StateFilter(States.already_started), F.text == "Удалить")
     async def deleting_item_handler(message: Message, state: FSMContext):
         try:
             await state.set_state(States.deleting_item)
@@ -28,31 +24,20 @@ def setup(router):
                 "delete_item_started",
                 "User initiated deleting items",
             )
-            list_id = (
-                await db.fetch_one(
-                    "SELECT list_id FROM users WHERE id = %s",
-                    (message.from_user.id,),
-                )
-            )[0]
-            wishes = [
-                i for i in await db.fetch_all(f"SELECT stuff_link, id FROM {list_id}")
-            ]
+
+            wishes = await db.fetch_all(
+                "SELECT stuff_link, id FROM wishlist_items WHERE user_id = %s",
+                (message.from_user.id,),
+            )
 
             if not wishes:
                 await shared.bot.send_message(message.from_user.id, "Ваш вишлист пуст.")
                 await state.set_state(States.already_started)
                 await set_default_keyboard(message.from_user.id)
-                log_user_action(
-                    message.from_user.id,
-                    message.from_user.username,
-                    "delete_item_empty_list",
-                    "User tried to delete from empty wishlist",
-                )
                 return
 
-            # Отправляем каждый товар с кнопкой удаления
-            for item, index in wishes:
-                builder = delete_item_button(index)
+            for item, item_id in wishes:
+                builder = delete_item_button(item_id)
                 await shared.bot.send_message(
                     message.from_user.id, item, reply_markup=builder.as_markup()
                 )
@@ -72,8 +57,7 @@ def setup(router):
                 error_traceback,
             )
             await shared.bot.send_message(
-                message.from_user.id,
-                "Произошла ошибка при загрузке списка товаров. Пожалуйста, попробуйте позже.",
+                message.from_user.id, "Произошла ошибка при загрузке списка товаров."
             )
             await state.set_state(States.already_started)
             await set_default_keyboard(message.from_user.id)

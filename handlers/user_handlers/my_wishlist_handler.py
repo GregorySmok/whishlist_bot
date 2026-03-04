@@ -4,7 +4,6 @@ from aiogram import F, types
 from aiogram.filters.state import StateFilter
 from aiogram.types import Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from emoji import emojize
 
 from database import db
 from keyboards.reply import set_default_keyboard
@@ -14,19 +13,13 @@ from states import States
 
 
 def setup(router):
-    @router.message(
-        StateFilter(States.already_started), F.text == emojize(":memo: Мой вишлист")
-    )
+    @router.message(StateFilter(States.already_started), F.text == "Мой вишлист")
     async def my_wishlist_handler(message: Message):
         try:
-            list_id = (
-                await db.fetch_one(
-                    "SELECT list_id FROM users WHERE id = %s", (message.from_user.id,)
-                )
-            )[0]
-            wishlist = [
-                i for i in await db.fetch_all(f"SELECT id, stuff_link FROM {list_id}")
-            ]
+            wishlist = await db.fetch_all(
+                "SELECT id, stuff_link FROM wishlist_items WHERE user_id = %s",
+                (message.from_user.id,),
+            )
 
             if not wishlist:
                 await shared.bot.send_message(message.from_user.id, "Ваш вишлист пуст.")
@@ -40,10 +33,10 @@ def setup(router):
                 return
 
             await shared.bot.send_message(message.from_user.id, "Ваш вишлист:")
-            for id_, link in wishlist:
+            for item_id, link in wishlist:
+                # Так как ID товара теперь уникальный глобально, достаточно проверить только его
                 booked = await db.fetch_one(
-                    "SELECT gifter FROM want_to_present WHERE gift = %s AND host_list = %s",
-                    (id_, list_id),
+                    "SELECT gifter FROM want_to_present WHERE gift = %s", (item_id,)
                 )
 
                 builder = InlineKeyboardBuilder()
@@ -74,7 +67,6 @@ def setup(router):
                 error_traceback,
             )
             await shared.bot.send_message(
-                message.from_user.id,
-                "Произошла ошибка при загрузке вишлиста. Пожалуйста, попробуйте позже.",
+                message.from_user.id, "Произошла ошибка при загрузке вишлиста."
             )
             await set_default_keyboard(message.from_user.id)

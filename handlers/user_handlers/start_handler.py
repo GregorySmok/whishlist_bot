@@ -1,5 +1,4 @@
 import traceback
-from random import choices
 
 from aiogram.filters import Command
 from aiogram.filters.state import StateFilter
@@ -34,30 +33,21 @@ def setup(router):
                 return
 
             await state.set_state(States.already_started)
-            users_list = [i[0] for i in await db.fetch_all("SELECT id FROM users")]
 
-            if message.from_user.id not in users_list:
-                is_id = False
-                existing_ids = await db.fetch_all("SELECT list_id FROM users")
-                existing_ids = (
-                    [id_[0] for id_ in existing_ids] if existing_ids else None
-                )
+            # Ищем пользователя в базе
+            user_exists = await db.fetch_one(
+                "SELECT id, username FROM users WHERE id = %s", (message.from_user.id,)
+            )
 
-                while not is_id:
-                    id_ = "".join(choices("0123456789qwertyuiopasdfghjklzxcvbnm", k=6))
-                    if id_ not in existing_ids:
-                        is_id = True
+            if not user_exists:
                 await db.execute(
-                    "INSERT INTO users (id, username, list_id) VALUES (%s, %s, %s)",
-                    (message.from_user.id, message.from_user.username, id_),
-                )
-                await db.execute(
-                    f"CREATE TABLE {id_} (id INT AUTO_INCREMENT PRIMARY KEY, stuff_link VARCHAR(2048))"
+                    "INSERT INTO users (id, username) VALUES (%s, %s)",
+                    (message.from_user.id, message.from_user.username),
                 )
 
                 await shared.bot.send_message(
                     message.from_user.id,
-                    f"Привет, {message.from_user.username}! Ваш вишлист создан.",
+                    f"Привет, {message.from_user.username}! Ваш профиль и вишлист созданы.",
                 )
                 log_user_action(
                     message.from_user.id,
@@ -66,39 +56,15 @@ def setup(router):
                     "New user registered",
                 )
             else:
-                list_id = (
-                    await db.fetch_one(
-                        "SELECT list_id FROM users WHERE id = %s",
-                        (message.from_user.id,),
-                    )
-                )[0]
-                if not list_id:
-                    username = (
-                        await db.fetch_one(
-                            "SELECT username FROM users WHERE id = %s",
-                            (message.from_user.id,),
-                        )
-                    )[0]
-                    is_id = False
-                    existing_ids = await db.fetch_all("SELECT list_id FROM users")
-                    existing_ids = (
-                        [id_[0] for id_ in existing_ids] if existing_ids else None
-                    )
-
-                    while not is_id:
-                        id_ = "".join(
-                            choices("0123456789qwertyuiopasdfghjklzxcvbnm", k=6)
-                        )
-                        if id_ not in existing_ids:
-                            is_id = True
+                # Если юзернейм поменялся — обновляем
+                if user_exists[1] != message.from_user.username:
                     await db.execute(
-                        "UPDATE users SET list_id = %s, username = %s WHERE id = %s",
-                        (id_, message.from_user.username, message.from_user.id),
+                        "UPDATE users SET username = %s WHERE id = %s",
+                        (message.from_user.username, message.from_user.id),
                     )
-                    await db.execute(f"RENAME TABLE {username} TO {id_}")
                 await shared.bot.send_message(
                     message.from_user.id,
-                    f"Привет, {message.from_user.username}! Что хочешь сделать ?",
+                    f"Привет, {message.from_user.username}! Что хочешь сделать?",
                 )
                 log_user_action(
                     message.from_user.id,
@@ -106,16 +72,7 @@ def setup(router):
                     "returning_user_login",
                     "Existing user started bot",
                 )
-            username_in_db = (
-                await db.fetch_one(
-                    "SELECT username FROM users WHERE id = %s", (message.from_user.id,)
-                )
-            )[0]
-            if username_in_db != message.from_user.username:
-                await db.execute(
-                    "UPDATE users SET username = %s WHERE id = %s",
-                    (message.from_user.username, message.from_user.id),
-                )
+
             await set_default_keyboard(message.from_user.id)
 
         except Exception as e:
@@ -125,5 +82,5 @@ def setup(router):
             )
             await shared.bot.send_message(
                 message.from_user.id,
-                "Произошла ошибка при запуске бота. Пожалуйста, попробуйте позже или обратитесь к администратору.",
+                "Произошла ошибка при запуске бота. Пожалуйста, попробуйте позже.",
             )

@@ -2,7 +2,6 @@ import traceback
 
 from aiogram import types
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from emoji import emojize
 
 from log_setup import log_error
 from shared import shared
@@ -11,17 +10,29 @@ from shared import shared
 async def set_default_keyboard(chat_id):
     try:
         builder = ReplyKeyboardBuilder()
+
+        # Вместо обычных эмодзи в тексте, используем чистый текст и параметр icon_custom_emoji_id
         builder.row(
-            types.KeyboardButton(text=emojize(":memo: Мой вишлист")),
-            types.KeyboardButton(text=emojize(":busts_in_silhouette: Друзья")),
-        )
-        builder.row(
-            types.KeyboardButton(text=emojize(":wrapped_gift: Добавить")),
-            types.KeyboardButton(text=emojize(":wastebasket: Удалить")),
+            types.KeyboardButton(
+                text="Мой вишлист",
+                icon_custom_emoji_id="5257965174979042426",  # Замени на ID твоего красивого Premium-эмодзи
+            ),
+            types.KeyboardButton(
+                text="Друзья", icon_custom_emoji_id="5260535596941582167"
+            ),
         )
         builder.row(
             types.KeyboardButton(
-                text=emojize(":magnifying_glass_tilted_left: Добавить друга"),
+                text="Добавить", icon_custom_emoji_id="5274008024585871702"
+            ),
+            types.KeyboardButton(
+                text="Удалить", icon_custom_emoji_id="5258130763148172425"
+            ),
+        )
+        builder.row(
+            types.KeyboardButton(
+                text="Добавить друга",
+                icon_custom_emoji_id="5258362837411045098",
                 request_user=types.KeyboardButtonRequestUser(
                     request_id=1, user_is_bot=False
                 ),
@@ -38,5 +49,5 @@ async def set_default_keyboard(chat_id):
         )
         await shared.bot.send_message(
             chat_id,
-            "Произошла ошибка при настройке клавиатуры. Пожалуйста, попробуйте позже или используйте текстовые команды.",
+            "Произошла ошибка при настройке клавиатуры. Пожалуйста, попробуйте позже.",
         )
