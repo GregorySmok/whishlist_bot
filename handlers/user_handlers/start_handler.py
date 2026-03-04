@@ -106,7 +106,16 @@ def setup(router):
                     "returning_user_login",
                     "Existing user started bot",
                 )
-
+            username_in_db = (
+                await db.fetch_one(
+                    "SELECT username FROM users WHERE id = %s", (message.from_user.id,)
+                )
+            )[0]
+            if username_in_db != message.from_user.username:
+                await db.execute(
+                    "UPDATE users SET username = %s WHERE id = %s",
+                    (message.from_user.username, message.from_user.id),
+                )
             await set_default_keyboard(message.from_user.id)
 
         except Exception as e:

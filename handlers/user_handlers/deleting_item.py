@@ -13,6 +13,7 @@ from states import States
 def setup(router):
     @router.callback_query(F.data.startswith("del_"), StateFilter(States.deleting_item))
     async def delete_item(callback_query: CallbackQuery):
+        callback_query.answer()
         try:
             # Получаем индекс товара из callback_data
             item_index = int(callback_query.data.replace("del_", ""))
