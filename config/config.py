@@ -19,4 +19,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 LOG_DIR = BASE_DIR / "logs"
 ITEMS_PER_PAGE = 3
 
+PROXY_URL = os.getenv("PROXY")
+
 admins = [2040304896]

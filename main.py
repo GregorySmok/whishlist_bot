@@ -1,8 +1,8 @@
 import asyncio
-import platform
 from typing import List
 
 from aiogram import Bot, Dispatcher, Router
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import config
@@ -11,9 +11,6 @@ from handlers import routers
 from log_setup import *
 from middlewares import BanMiddleware
 from shared import shared
-
-if platform.system() == "Windows":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 async def on_shutdown() -> None:
@@ -42,7 +39,14 @@ async def main() -> None:
     """Основная функция запуска бота."""
     main_logger.info("Bot starting...")
     token = config.BOT_TOKEN
-    shared.bot = Bot(token=token)
+    proxy_url = config.PROXY_URL
+    if proxy_url:
+        session = AiohttpSession(proxy=proxy_url)
+        shared.bot = Bot(token=token, session=session)
+        print("Proxy is used")
+    else:
+        print("No proxy")
+        shared.bot = Bot(token=token)
     shared.dp = Dispatcher(storage=MemoryStorage())
     shared.dp.message.middleware(BanMiddleware())
 
