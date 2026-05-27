@@ -93,7 +93,6 @@ class DatabaseManager:
         async with self.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, params)
-                await conn.commit()
 
     async def fetch_one(self, query: str, params: tuple = None) -> Optional[tuple]:
         """

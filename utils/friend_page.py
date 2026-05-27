@@ -10,6 +10,12 @@ from log_setup import log_error, log_user_action
 
 async def show_friends_page(message: Message, user_id: int, page: int):
     try:
+        # Получаем username один раз, чтобы избежать лишних запросов к БД
+        user_data = await db.fetch_one(
+            "SELECT username FROM users WHERE id = %s", (user_id,)
+        )
+        username = user_data[0] if user_data else "unknown"
+
         friends = [
             i[0] if i[1] == user_id else i[1]
             for i in await db.fetch_all(
@@ -33,11 +39,7 @@ async def show_friends_page(message: Message, user_id: int, page: int):
                 )
                 log_user_action(
                     user_id,
-                    (
-                        await db.fetch_one(
-                            "SELECT username FROM users WHERE id = %s", (user_id,)
-                        )
-                    )[0],
+                    username,
                     "view_empty_friends_list",
                     "User viewed empty friends list",
                 )
@@ -51,7 +53,9 @@ async def show_friends_page(message: Message, user_id: int, page: int):
         builder = await friends_list_kb(friends, total_friends, page)
         text = f"Страница {page + 1}. Выберите друга:"
 
-        # Проверяем, есть ли у message атрибут message_id (это CallbackQuery.message)
+        # Для навигации по страницам (предположительно, из CallbackQuery)
+        # Рекомендация: вместо delete() + send_message() лучше использовать
+        # message.edit_text(), чтобы избежать мерцания сообщения.
         if hasattr(message, "message_id") and message.message_id:
             # Это навигация по страницам - удаляем старое и отправляем новое
             try:
@@ -74,11 +78,7 @@ async def show_friends_page(message: Message, user_id: int, page: int):
 
         log_user_action(
             user_id,
-            (
-                await db.fetch_one(
-                    "SELECT username FROM users WHERE id = %s", (user_id,)
-                )
-            )[0],
+            username,
             "view_friends_page",
             f"User viewed friends page {page + 1} with {len(friends)} friends",
         )

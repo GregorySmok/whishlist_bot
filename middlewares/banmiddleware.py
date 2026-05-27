@@ -8,9 +8,6 @@ from database import db
 
 
 class BanMiddleware(BaseMiddleware):
-    def __init__(self):
-        super().__init__()
-
     async def __call__(
         self,
         handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
@@ -18,10 +15,10 @@ class BanMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         # Проверяем, находится ли пользователь в бан-листе
-        user_id = event.from_user.username
+        user_id = event.from_user.id
 
         # Здесь выполняем запрос к базе данных для проверки
-        is_banned = await self.check_if_banned(user_id)
+        is_banned = await self.is_user_banned(user_id)
 
         if is_banned:
             # Если пользователь в бан-листе, прерываем обработку
@@ -32,8 +29,8 @@ class BanMiddleware(BaseMiddleware):
         # Если пользователь не в бан-листе, продолжаем обработку
         return await handler(event, data)
 
-    async def check_if_banned(self, user_id: str) -> bool:
+    async def is_user_banned(self, user_id: int) -> bool:
         result = await db.fetch_one(
-            "SELECT * FROM banlist WHERE username = %s", (user_id,)
+            "SELECT user_id FROM banlist WHERE user_id = %s", (user_id,)
         )
-        return result
+        return bool(result)
