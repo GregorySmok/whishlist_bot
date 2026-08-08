@@ -15,10 +15,10 @@ class BanMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         # Проверяем, находится ли пользователь в бан-листе
-        user_id = event.from_user.id
+        user = event.from_user.username
 
         # Здесь выполняем запрос к базе данных для проверки
-        is_banned = await self.is_user_banned(user_id)
+        is_banned = await self.is_user_banned(user)
 
         if is_banned:
             # Если пользователь в бан-листе, прерываем обработку
@@ -29,8 +29,8 @@ class BanMiddleware(BaseMiddleware):
         # Если пользователь не в бан-листе, продолжаем обработку
         return await handler(event, data)
 
-    async def is_user_banned(self, user_id: int) -> bool:
+    async def is_user_banned(self, user: int) -> bool:
         result = await db.fetch_one(
-            "SELECT user_id FROM banlist WHERE user_id = %s", (user_id,)
+            "SELECT username FROM banlist WHERE username = %s", (user,)
         )
         return bool(result)
